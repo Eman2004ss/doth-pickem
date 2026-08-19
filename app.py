@@ -145,7 +145,6 @@ ui.add_head_html(
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Doth Thou Knoweth Ball">
-    /assets/favicon.png
     """,
     shared=True,
 )
