@@ -106,17 +106,6 @@ def leaderboard_page():
                     """
                 )
 
-                ui.label(
-                    f"Rank #{row.rank}"
-                ).style(
-                    f"""
-                    color: {rank_color};
-                    font-size: 18px;
-                    font-weight: bold;
-                    margin-top: 2px;
-                    """
-                )
-
                 ui.separator().style(
                     "background-color: #333333;"
                 )

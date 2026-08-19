@@ -60,6 +60,7 @@ def rules_page():
                 overflow-x: auto;
                 overflow-y: hidden;
                 -webkit-overflow-scrolling: touch;
+                touch-action: pan-x;
                 margin-top: 12px;
             ">
                 <table style="
