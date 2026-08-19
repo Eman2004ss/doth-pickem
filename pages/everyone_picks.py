@@ -112,8 +112,8 @@ def everyone_picks_page():
                 if logo:
                 
                     with ui.element('div').style("""
-                        width: 160px;
-                        height: 160px;
+                        width: min(160px, 25vw);
+                        height: min(160px,25vw);
                         flex-shrink: 0;
                         display: flex;
                         align-items: center;
@@ -246,7 +246,7 @@ def everyone_picks_page():
                 result_color = "#ef4444"
 
             with ui.row().classes(
-                "w-full items-center"
+                "w-full items-center justify-between wrap"
             ).style(
                 row_style
             ):

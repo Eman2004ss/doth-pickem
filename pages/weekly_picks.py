@@ -190,8 +190,8 @@ def weekly_picks_page():
                     if logo:
                     
                         with ui.element('div').style("""
-                            width: 160px;
-                            height: 160px;
+                            width: min(160px, 25vw);
+                            height: min(160px,25vw);
                             flex-shrink: 0;
                             display: flex;
                             align-items: center;
@@ -226,7 +226,10 @@ def weekly_picks_page():
                             team.record
                             or "Record Unavailable"
                         ).style(
-                            "color: #d1d5db;"
+                            """
+                            color: #d1d5db;
+                            white-space: nowrap;
+                            """
                         )
 
                         pick_button = ui.button(
@@ -326,7 +329,7 @@ def weekly_picks_page():
                             )
 
                         with ui.row().classes(
-                            "w-full justify-around"
+                            "w-full items-center justify-between wrap"
                         ):
 
                             team_pick_card(
