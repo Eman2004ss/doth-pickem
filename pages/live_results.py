@@ -103,6 +103,9 @@ def live_results_page():
                     logo = logo_source(
                         team
                     )
+                    logo = logo_source(team)
+
+                    ui.label(f'Logo: {logo}')
                     if logo:
 
                         with ui.element('div').style("""
