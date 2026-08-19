@@ -110,14 +110,13 @@ def rules_page():
                 </table>
             """
 
-            with ui.scroll_area().classes(
-                "w-full"
-            ).style(
-                """
+            with ui.element('div').style("""
+                width: 100%;
+                overflow-x: auto;
+                overflow-y: hidden;
                 max-width: 100%;
-                height: auto;
-                """
-            ):
+                border: 1px solid #333333;
+            """):
 
                 ui.html(html)
 
