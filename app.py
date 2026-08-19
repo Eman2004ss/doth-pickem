@@ -140,9 +140,15 @@ def rules():
 
 import os
 
+ui.add_head_html("""
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Doth Thou Knoweth Ball">
+""")
+
 ui.run(
     title="DothPick",
-    favicon="🏈 ",
+    favicon="/assets/favicon.png",
     reload=False,
     storage_secret="DothPickSecretKey",
     host="0.0.0.0",
