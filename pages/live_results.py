@@ -3,7 +3,7 @@ from nicegui import ui
 from services.week_service import (
     get_all_weeks
 )
-
+from services.logo_service import get_logo_path
 from services.game_service import (
     get_games_by_week
 )
@@ -52,30 +52,21 @@ def live_results_page():
             if not team:
                 return None
 
-            if not team.logo_path:
+            logo = get_logo_path(team.id)
+
+            if not logo:
                 return None
 
-            if (
-                team.logo_path.startswith("http://")
-                or
-                team.logo_path.startswith("https://")
-            ):
+            if logo.startswith("http://") or logo.startswith("https://"):
+                return logo
 
-                return team.logo_path
+            if logo.startswith("/assets/"):
+                return logo
 
-            if team.logo_path.startswith(
-                "/assets/"
-            ):
+            if logo.startswith("assets/"):
+                return "/" + logo
 
-                return team.logo_path
-
-            if team.logo_path.startswith(
-                "assets/"
-            ):
-
-                return "/" + team.logo_path
-
-            return team.logo_path
+            return logo
 
         def team_score_row(
             team,
