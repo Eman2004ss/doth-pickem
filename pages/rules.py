@@ -54,20 +54,12 @@ def rules_page():
         def dark_table(headers, rows):
 
             html = """
-            <div style="
-                width: 100%;
-                overflow-x: scroll;
-                overflow-y: hidden;
-                -webkit-overflow-scrolling: touch;
-                margin-top: 12px;
-                border-radius: 8px;
+            <table style="
+                width: max-content;
+                border-collapse: collapse;
+                color: white;
+                white-space:nowrap;
             ">
-                <table style="
-                    min-width: 1200px;
-                    border-collapse: collapse;
-                    color: white;
-                    white-space: nowrap;
-                ">
                     <thead>
                         <tr>
             """
@@ -116,10 +108,18 @@ def rules_page():
             html += """
                     </tbody>
                 </table>
-            </div>
             """
 
-            ui.html(html)
+            with ui.scroll_area().classes(
+                "w-full"
+            ).style(
+                """
+                max-width: 100%;
+                height: auto;
+                """
+            ):
+
+                ui.html(html)
 
         with section_card(
             "Weekly Points"
