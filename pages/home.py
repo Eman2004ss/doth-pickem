@@ -291,6 +291,7 @@ def home_page():
                         border: 1px solid #3a3a3a;
                         border-radius: 12px;
                         padding: 16px;
+                        box-sizing: border-box;
                         """
                     ):
 

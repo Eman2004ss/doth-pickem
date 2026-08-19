@@ -142,7 +142,7 @@ import os
 
 ui.run(
     title="DothPick",
-    favicon="🏈",
+    favicon="🏈 ",
     reload=False,
     storage_secret="DothPickSecretKey",
     host="0.0.0.0",
