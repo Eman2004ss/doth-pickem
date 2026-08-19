@@ -676,6 +676,10 @@ def admin_page():
 
             if success:
 
+                ui.download(
+                    "picks_export.xlsx"
+                )
+
                 ui.notify(
                     "Excel export created.",
                     color="positive"
