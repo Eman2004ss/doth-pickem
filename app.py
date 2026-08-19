@@ -138,9 +138,13 @@ def rules():
     rules_page()
 
 
+import os
+
 ui.run(
     title="DothPick",
     favicon="🏈",
-    reload=True,
-    storage_secret="DothPickSecretKey"
+    reload=False,
+    storage_secret="DothPickSecretKey",
+    host="0.0.0.0",
+    port=int(os.environ.get("PORT", 8080)),
 )
