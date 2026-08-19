@@ -13,8 +13,9 @@ def rules_page():
             "Master Plan - Football Season"
         ).style("""
             color: white;
-            font-size: clamp(24px, 5vw, 36px);
+            font-size: clamp(20px, 7vw, 36px);
             font-weight: bold;
+            line-height: 1.1;
         """)
 
         ui.label(
@@ -35,6 +36,7 @@ def rules_page():
                 border-radius: 14px;
                 padding: 18px;
                 margin-top: 14px;
+                overflow-x: hidden;
                 """
             )
 
@@ -53,14 +55,21 @@ def rules_page():
         def dark_table(headers, rows):
 
             html = """
-            <table style="
-                min-width: 900px;
-                border-collapse: collapse;
-                color: white;
+            <div style="
+                width: 100%;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
                 margin-top: 12px;
             ">
-                <thead>
-                    <tr>
+                <table style="
+                    min-width: max-content;
+                    border-collapse: collapse;
+                    color: white;
+                    white-space: nowrap;
+                ">
+                    <thead>
+                        <tr>
             """
 
             for header in headers:
@@ -72,15 +81,16 @@ def rules_page():
                         background-color: #202020;
                         color: white;
                         text-align: left;
+                        white-space: nowrap;
                     ">
                         {header}
                     </th>
                 """
 
             html += """
-                    </tr>
-                </thead>
-                <tbody>
+                        </tr>
+                    </thead>
+                    <tbody>
             """
 
             for row in rows:
@@ -95,6 +105,7 @@ def rules_page():
                         padding: 10px;
                         background-color: #111111;
                         color: white;
+                        white-space: nowrap;
                     ">
                         {cell}
                     </td>
@@ -103,21 +114,12 @@ def rules_page():
                 html += "</tr>"
 
             html += """
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
             """
 
-            ui.html(
-                f"""
-                <div style="
-                    width: 100%;
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
-                ">
-                    {html}
-                </div>
-                """
-            )
+            ui.html(html)
 
         with section_card(
             "Weekly Points"

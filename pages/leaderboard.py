@@ -19,10 +19,12 @@ def leaderboard_page():
 
         ui.label(
             "Leaderboard"
-        ).classes(
-            "text-h3"
         ).style(
-            "color: white;"
+            """
+            color: white;
+            font-size: clamp(32px, 8vw, 56px);
+            font-weight: bold;
+            """
         )
 
         leaderboard_rows = get_leaderboard()
@@ -36,72 +38,6 @@ def leaderboard_page():
             )
 
             return
-
-        with ui.card().classes(
-            "w-full"
-        ).style(
-            """
-            background-color: #151515;
-            color: white;
-            border: 1px solid #333333;
-            border-radius: 14px;
-            padding: 18px;
-            """
-        ):
-
-            with ui.row().classes(
-                "w-full items-center"
-            ):
-
-                ui.label(
-                    "Rank"
-                ).style(
-                    """
-                    color: white;
-                    font-weight: bold;
-                    width: 90px;
-                    """
-                )
-
-                ui.label(
-                    "Player"
-                ).style(
-                    """
-                    color: white;
-                    font-weight: bold;
-                    width: 180px;
-                    """
-                )
-
-                ui.label(
-                    "Points"
-                ).style(
-                    """
-                    color: white;
-                    font-weight: bold;
-                    width: 120px;
-                    """
-                )
-
-                ui.label(
-                    "Accuracy"
-                ).style(
-                    """
-                    color: white;
-                    font-weight: bold;
-                    width: 120px;
-                    """
-                )
-
-                ui.label(
-                    "Weekly Wins"
-                ).style(
-                    """
-                    color: white;
-                    font-weight: bold;
-                    width: 140px;
-                    """
-                )
 
         for row in leaderboard_rows:
 
@@ -126,19 +62,23 @@ def leaderboard_page():
 
             rank_color = "#ffffff"
             border_color = "#333333"
+            medal = ""
 
             if row.rank == 1:
 
+                medal = "🥇"
                 rank_color = "gold"
                 border_color = "gold"
 
             elif row.rank == 2:
 
+                medal = "🥈"
                 rank_color = "silver"
                 border_color = "silver"
 
             elif row.rank == 3:
 
+                medal = "🥉"
                 rank_color = "#cd7f32"
                 border_color = "#cd7f32"
 
@@ -149,88 +89,144 @@ def leaderboard_page():
                 background-color: #151515;
                 color: white;
                 border: 1px solid {border_color};
-                border-left: 6px solid {border_color};
-                border-radius: 14px;
-                padding: 18px;
+                border-left: 8px solid {border_color};
+                border-radius: 16px;
+                padding: 20px;
+                margin-top: 12px;
                 """
             ):
 
-                with ui.row().classes(
-                    "w-full items-center"
-                ):
+                ui.label(
+                    f"{medal} {user.username}"
+                ).style(
+                    """
+                    color: white;
+                    font-size: 28px;
+                    font-weight: bold;
+                    """
+                )
 
-                    ui.label(
-                        f"#{row.rank}"
-                    ).style(
-                        f"""
-                        color: {rank_color};
-                        font-weight: bold;
-                        font-size: 22px;
-                        width: 90px;
-                        """
-                    )
-
-                    ui.label(
-                        user.username
-                    ).style(
-                        """
-                        color: white;
-                        font-weight: bold;
-                        font-size: 18px;
-                        width: 180px;
-                        """
-                    )
-
-                    ui.label(
-                        str(
-                            row.total_points
-                        )
-                    ).style(
-                        """
-                        color: #22c55e;
-                        font-weight: bold;
-                        font-size: 18px;
-                        width: 120px;
-                        """
-                    )
-
-                    ui.label(
-                        f"{accuracy}%"
-                    ).style(
-                        """
-                        color: #d1d5db;
-                        width: 120px;
-                        """
-                    )
-
-                    ui.label(
-                        str(
-                            row.weekly_wins
-                        )
-                    ).style(
-                        """
-                        color: #60a5fa;
-                        font-weight: bold;
-                        width: 140px;
-                        """
-                    )
+                ui.label(
+                    f"Rank #{row.rank}"
+                ).style(
+                    f"""
+                    color: {rank_color};
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin-top: 2px;
+                    """
+                )
 
                 ui.separator().style(
                     "background-color: #333333;"
                 )
 
-                with ui.row().classes(
+                with ui.grid(
+                    columns=2
+                ).classes(
                     "w-full"
+                ).style(
+                    "margin-top: 10px;"
+                ):
+
+                    with ui.column():
+
+                        ui.label(
+                            "Points"
+                        ).style(
+                            "color: #9ca3af;"
+                        )
+
+                        ui.label(
+                            str(
+                                row.total_points
+                            )
+                        ).style(
+                            """
+                            color: #22c55e;
+                            font-size: 28px;
+                            font-weight: bold;
+                            """
+                        )
+
+                    with ui.column():
+
+                        ui.label(
+                            "Accuracy"
+                        ).style(
+                            "color: #9ca3af;"
+                        )
+
+                        ui.label(
+                            f"{accuracy}%"
+                        ).style(
+                            """
+                            color: white;
+                            font-size: 28px;
+                            font-weight: bold;
+                            """
+                        )
+
+                    with ui.column():
+
+                        ui.label(
+                            "Weekly Wins"
+                        ).style(
+                            "color: #9ca3af;"
+                        )
+
+                        ui.label(
+                            str(
+                                row.weekly_wins
+                            )
+                        ).style(
+                            """
+                            color: #60a5fa;
+                            font-size: 28px;
+                            font-weight: bold;
+                            """
+                        )
+
+                    with ui.column():
+
+                        ui.label(
+                            "Correct Picks"
+                        ).style(
+                            "color: #9ca3af;"
+                        )
+
+                        ui.label(
+                            str(
+                                row.correct_picks
+                            )
+                        ).style(
+                            """
+                            color: white;
+                            font-size: 28px;
+                            font-weight: bold;
+                            """
+                        )
+
+                ui.separator().style(
+                    """
+                    background-color: #333333;
+                    margin-top: 10px;
+                    margin-bottom: 10px;
+                    """
+                )
+
+                with ui.row().classes(
+                    "justify-around w-full"
                 ):
 
                     ui.label(
-                        f"Correct Picks: {row.correct_picks}"
+                        f"📋 Total Picks: {row.total_picks}"
                     ).style(
                         "color: #d1d5db;"
                     )
 
                     ui.label(
-                        f"Total Picks: {row.total_picks}"
+                        f"✅ Correct: {row.correct_picks}"
                     ).style(
                         "color: #d1d5db;"
                     )
