@@ -11,11 +11,11 @@ def rules_page():
 
         ui.label(
             "Master Plan - Football Season"
-        ).classes(
-            "text-h3"
-        ).style(
-            "color: white;"
-        )
+        ).style("""
+            color: white;
+            font-size: clamp(24px, 5vw, 36px);
+            font-weight: bold;
+        """)
 
         ui.label(
             "Rules, layout, and scoring structure for the DothPick football season."
@@ -54,7 +54,7 @@ def rules_page():
 
             html = """
             <table style="
-                width: 100%;
+                min-width: 900px;
                 border-collapse: collapse;
                 color: white;
                 margin-top: 12px;
@@ -108,7 +108,15 @@ def rules_page():
             """
 
             ui.html(
-                html
+                f"""
+                <div style="
+                    width: 100%;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                ">
+                    {html}
+                </div>
+                """
             )
 
         with section_card(

@@ -169,8 +169,9 @@ def weekly_picks_page():
                 border: 1px solid #3a3a3a;
                 border-radius: 14px;
                 padding: 16px;
-                min-width: 420px;
-                overflow: visible;
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
                 """
             ):
 
@@ -190,8 +191,8 @@ def weekly_picks_page():
                     if logo:
                     
                         with ui.element('div').style("""
-                            width: min(160px, 25vw);
-                            height: min(160px,25vw);
+                            width: min(120px, 25vw);
+                            height: min(120px,25vw);
                             flex-shrink: 0;
                             display: flex;
                             align-items: center;
@@ -212,14 +213,21 @@ def weekly_picks_page():
 
                     with ui.column().style(
                         """
-                        min-width: 220px;
+                        min-width: 0;
+                        flex: 1;
                         """
                     ):
 
                         ui.label(
                             team.team_name
                         ).style(
-                            "color: white; font-weight: bold; font-size: 18px;"
+                            """
+                            color: white;
+                            font-weight: bold;
+                            font-size: 18px;
+                            white-space: normal;
+                            overflow-wrap: break-word;
+                            """
                         )
 
                         ui.label(
