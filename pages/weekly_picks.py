@@ -1,5 +1,5 @@
 from nicegui import ui, app
-
+from services.logo_service import get_local_logo_path
 from services.week_service import (
     get_all_weeks
 )
@@ -83,30 +83,7 @@ def weekly_picks_page():
             if not team:
                 return None
 
-            if not team.logo_path:
-                return None
-
-            if team.logo_path.startswith(
-                "http://"
-            ) or team.logo_path.startswith(
-                "https://"
-            ):
-
-                return team.logo_path
-
-            if team.logo_path.startswith(
-                "/assets/"
-            ):
-
-                return team.logo_path
-
-            if team.logo_path.startswith(
-                "assets/"
-            ):
-
-                return "/" + team.logo_path
-
-            return team.logo_path
+            return "/" + get_local_logo_path(team.team_name)
 
         def save_pick(
             game_id,
