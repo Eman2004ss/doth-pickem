@@ -140,8 +140,13 @@ def live_results_page():
                             team.record
                             or "Record Unavailable"
                         ).style(
-                            "color: #d1d5db;"
+                            """
+                            color: #d1d5db;
+                            white-space: nowrap;
+                            min-width: 50px;
+                            """
                         )
+
 
                 ui.label(
                     str(score)
