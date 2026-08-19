@@ -6,7 +6,7 @@ ADMIN_USERNAME = "Hawes"
 
 DEFAULT_USERS = [
     "Hawes",
-    "Coleman",
+    "Clong",
     "Jimbo"
 ]
 

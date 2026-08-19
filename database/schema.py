@@ -46,7 +46,7 @@ def create_database():
                 is_admin=True
             ),
             User(
-                username="Coleman",
+                username="Clong",
                 password="password",
                 is_admin=False
             ),
