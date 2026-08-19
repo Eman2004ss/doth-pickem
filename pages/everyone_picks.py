@@ -66,7 +66,7 @@ def everyone_picks_page():
         def logo_source(team):
             if not team:
                 return None
-            return "/: + get_local_logo_path(team.team_name)"       
+            return "/" + get_local_logo_path(team.team_name)"       
         
         def team_block(team):
 
