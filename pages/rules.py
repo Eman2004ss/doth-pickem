@@ -36,7 +36,6 @@ def rules_page():
                 border-radius: 14px;
                 padding: 18px;
                 margin-top: 14px;
-                overflow-x: hidden;
                 """
             )
 
@@ -57,14 +56,14 @@ def rules_page():
             html = """
             <div style="
                 width: 100%;
-                overflow-x: auto;
+                overflow-x: scroll;
                 overflow-y: hidden;
                 -webkit-overflow-scrolling: touch;
-                touch-action: pan-x;
                 margin-top: 12px;
+                border-radius: 8px;
             ">
                 <table style="
-                    min-width: max-content;
+                    min-width: 1200px;
                     border-collapse: collapse;
                     color: white;
                     white-space: nowrap;
