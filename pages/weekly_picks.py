@@ -175,7 +175,7 @@ def weekly_picks_page():
             ):
 
                 with ui.row().classes(
-                    "items-center no-wrap"
+                    "w-full items-center justify-between wrap"
                 ).style(
                     """
                     gap: 20px;
