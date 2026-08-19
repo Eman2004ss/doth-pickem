@@ -60,7 +60,8 @@ def live_results_page():
         ):
 
             with ui.row().classes(
-                "w-full items-center justify-between no-wrap"
+                "w-full items-center justify-between wrap"
+
             ).style(
                 """
                 background-color: #202020;
@@ -94,8 +95,8 @@ def live_results_page():
                     if logo:
 
                         with ui.element('div').style("""
-                            width: 160px;
-                            height: 160px;
+                            width: min(160px, 25vw);
+                            height: min(160px, 25vw);
                             flex-shrink: 0;
                             display: flex;
                             align-items: center;
