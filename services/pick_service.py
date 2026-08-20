@@ -299,6 +299,10 @@ def delete_pick(pick_id):
         if not pick:
             return False
 
+        # Locked picks are part of the permanent weekly history.
+        if pick.locked:
+            return False
+
         db.delete(pick)
 
         db.commit()

@@ -2,7 +2,9 @@ from database.db import SessionLocal
 
 from database.models import (
     Week,
-    Setting
+    Setting,
+    Game,
+    Pick
 )
 
 
@@ -368,6 +370,27 @@ def delete_week(week_id):
         )
 
         if not week:
+            return False
+
+        # A week becomes permanent once any pick is locked or a game completes.
+        has_locked_picks = (
+            db.query(Pick)
+            .join(Game, Pick.game_id == Game.id)
+            .filter(Game.week_id == week.id)
+            .filter(Pick.locked == True)
+            .first()
+            is not None
+        )
+
+        has_completed_games = (
+            db.query(Game)
+            .filter(Game.week_id == week.id)
+            .filter(Game.completed == True)
+            .first()
+            is not None
+        )
+
+        if has_locked_picks or has_completed_games:
             return False
 
         was_active = week.active

@@ -19,6 +19,12 @@ from tasks.calculate_results import run as calculate_results
 from services.leaderboard_service import (
     update_all_leaderboards
 )
+from database.schema import create_database
+
+
+# Create any missing tables and initialize a brand-new Neon database before
+# the scheduler or any page attempts to query it. Existing Neon data is preserved.
+create_database()
 
 
 app.add_static_files(
@@ -153,7 +159,7 @@ ui.run(
     title="DothPick",
     favicon="/assets/favicon.png",
     reload=False,
-    storage_secret="DothPickSecretKey",
+    storage_secret=os.environ.get("STORAGE_SECRET", "DothPickSecretKey"),
     host="0.0.0.0",
     port=int(os.environ.get("PORT", 8080)),
 )
