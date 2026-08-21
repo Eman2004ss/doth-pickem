@@ -1,5 +1,8 @@
 from datetime import datetime
-
+from utils.team_data import (
+    NCAA_CONFERENCES,
+    NFL_DIVISIONS
+)
 from nicegui import ui
 from services.export_service import (
     export_picks_to_excel
@@ -84,7 +87,7 @@ def admin_page():
         def add_game_input(game_number):
 
             with games_container:
-
+        
                 with ui.card().classes(
                     "w-full"
                 ).style(
@@ -97,7 +100,7 @@ def admin_page():
                     margin-top: 12px;
                     """
                 ):
-
+        
                     ui.label(
                         f"Game {game_number}"
                     ).classes(
@@ -105,7 +108,7 @@ def admin_page():
                     ).style(
                         "color: white;"
                     )
-
+        
                     sport = ui.select(
                         options=[
                             "ncaa",
@@ -114,31 +117,131 @@ def admin_page():
                         value="ncaa",
                         label="Sport"
                     )
-
-                    away_team = ui.input(
+        
+                    away_conference = ui.select(
+                        options=[],
+                        label="Away Conference / Division"
+                    )
+        
+                    away_team = ui.select(
+                        options=[],
                         label="Away Team"
+                    ).props(
+                        "use-input"
                     )
-
-                    home_team = ui.input(
+        
+                    home_conference = ui.select(
+                        options=[],
+                        label="Home Conference / Division"
+                    )
+        
+                    home_team = ui.select(
+                        options=[],
                         label="Home Team"
+                    ).props(
+                        "use-input"
                     )
-
+        
+                    def update_conferences():
+        
+                        if sport.value == "nfl":
+        
+                            available_groups = list(
+                                NFL_DIVISIONS.keys()
+                            )
+        
+                        else:
+        
+                            available_groups = list(
+                                NCAA_CONFERENCES.keys()
+                            )
+        
+                        away_conference.set_options(
+                            available_groups
+                        )
+        
+                        home_conference.set_options(
+                            available_groups
+                        )
+        
+                        away_team.set_options([])
+                        home_team.set_options([])
+        
+                    def update_away_teams():
+        
+                        if sport.value == "nfl":
+        
+                            away_team.set_options(
+                                NFL_DIVISIONS.get(
+                                    away_conference.value,
+                                    []
+                                )
+                            )
+        
+                        else:
+        
+                            away_team.set_options(
+                                NCAA_CONFERENCES.get(
+                                    away_conference.value,
+                                    []
+                                )
+                            )
+        
+                    def update_home_teams():
+        
+                        if sport.value == "nfl":
+        
+                            home_team.set_options(
+                                NFL_DIVISIONS.get(
+                                    home_conference.value,
+                                    []
+                                )
+                            )
+        
+                        else:
+        
+                            home_team.set_options(
+                                NCAA_CONFERENCES.get(
+                                    home_conference.value,
+                                    []
+                                )
+                            )
+        
+                    sport.on(
+                        "update:model-value",
+                        lambda e: update_conferences()
+                    )
+        
+                    away_conference.on(
+                        "update:model-value",
+                        lambda e: update_away_teams()
+                    )
+        
+                    home_conference.on(
+                        "update:model-value",
+                        lambda e: update_home_teams()
+                    )
+        
+                    update_conferences()
+        
                     tier = ui.select(
                         options=VALID_TIERS,
                         value="A",
                         label="Tier"
                     )
-
+        
                     result_label = ui.label(
                         ""
                     ).style(
                         "color: #d1d5db;"
                     )
-
+        
                     game_inputs.append(
                         {
                             "game_number": game_number,
                             "sport": sport,
+                            "away_conference": away_conference,
+                            "home_conference": home_conference,
                             "away_team": away_team,
                             "home_team": home_team,
                             "tier": tier,
