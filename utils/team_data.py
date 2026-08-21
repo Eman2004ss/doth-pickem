@@ -48,7 +48,7 @@ NFL_DIVISIONS = {
         "Seattle Seahawks"
     ]
 }
-
+NCAA_CONFERENCES = {
 "ACC": [
     "Boston College Eagles",
     "California Golden Bears",
