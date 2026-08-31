@@ -96,6 +96,7 @@ class SpecialBonus(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
 class PlayoffGame(Base):
     __tablename__ = "playoff_games"
     __table_args__ = (

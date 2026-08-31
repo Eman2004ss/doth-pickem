@@ -23,9 +23,9 @@ from pages.home import home_page
 from pages.leaderboard import leaderboard_page
 from pages.live_results import live_results_page
 from pages.login import login_page
+from pages.playoffs import playoffs_page
 from pages.rules_v2 import rules_page
 from pages.special_picks import special_picks_page
-from pages.playoffs import playoffs_page
 from pages.weekly_picks import weekly_picks_page
 from services.leaderboard_service import update_all_leaderboards
 from tasks.calculate_results import run as calculate_results
@@ -126,10 +126,12 @@ def leaderboard():
 def rules():
     rules_page()
 
+
 @ui.page("/playoffs")
 def playoffs():
     playoffs_page()
-    
+
+
 ui.add_head_html(
     """
     <meta name="apple-mobile-web-app-capable" content="yes">

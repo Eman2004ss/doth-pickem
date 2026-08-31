@@ -34,6 +34,7 @@ def home_page():
         with ui.row().classes("items-center wrap"):
             ui.button("Weekly Picks", on_click=lambda: ui.navigate.to("/weekly-picks"))
             ui.button("Special Picks", on_click=lambda: ui.navigate.to("/special-picks"))
+            ui.button("Playoffs", on_click=lambda: ui.navigate.to("/playoffs"))
             ui.button("Everyone's Picks", on_click=lambda: ui.navigate.to("/everyone-picks"))
             ui.button("Live Results", on_click=lambda: ui.navigate.to("/live-results"))
             ui.button("Leaderboard", on_click=lambda: ui.navigate.to("/leaderboard"))

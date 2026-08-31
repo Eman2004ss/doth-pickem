@@ -5,8 +5,8 @@ from database.db import SessionLocal
 from database.models import Game, Team, Week
 from database.extra_models import SpecialLock, SpecialPick
 from services.espn_compat import find_first_kickoff
-
 from utils.team_data import NCAA_CONFERENCES
+
 
 # Automatic lock anchors.  Manual admin overrides in special_locks take priority.
 # CFB postseason conference picks lock at the first conference-championship-week
@@ -18,8 +18,6 @@ LOCK_ANCHORS = {
     ("cfb_conference", "postseason"): ("ncaa", 15, 2),
     ("cfp_preseason", "preseason"): ("ncaa", 0, 2),
     ("nfl_preseason", "preseason"): ("nfl", 1, 2),
-    ("nfl_champion", "midseason"): ("nfl", 10, 2),
-    ("nfl_champion", "postseason"): ("nfl", 1, 3),
     ("nfl_division", "preseason"): ("nfl", 1, 2),
 }
 
@@ -281,11 +279,6 @@ def save_conference_pick(user_id, period, conference, selection):
     finally:
         db.close()
 
-def get_all_fbs_teams():
-    teams = set()
-    for conference_teams in NCAA_CONFERENCES.values():
-        teams.update(conference_teams)
-    return sorted(teams)
 
 def get_team_names(sport=None):
     db = SessionLocal()
@@ -299,14 +292,26 @@ def get_team_names(sport=None):
 
 
 def get_nfl_teams(conference=None):
+    """Always draw from the full 32-team roster, not just teams that already
+    have a scheduled weekly game in the database."""
     if conference:
         return sorted(team for team, conf in NFL_CONFERENCE.items() if conf == conference)
     return sorted(NFL_CONFERENCE)
 
-from utils.team_data import NCAA_CONFERENCES
 
 def get_cfb_conference_teams(conference):
-    return NCAA_CONFERENCES.get(conference, [])
+    """Use the static, curated conference lists instead of the database's
+    Team.conference column, which is never populated by the admin form."""
+    return sorted(NCAA_CONFERENCES.get(conference, []))
+
+
+def get_all_fbs_teams():
+    """Every FBS team across all conferences, for picks that aren't scoped
+    to a single conference (e.g. CFP preseason champion picks)."""
+    teams = set()
+    for conference_teams in NCAA_CONFERENCES.values():
+        teams.update(conference_teams)
+    return sorted(teams)
 
 
 def lock_expired_special_picks():
