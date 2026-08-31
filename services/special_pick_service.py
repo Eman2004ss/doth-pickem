@@ -6,6 +6,7 @@ from database.models import Game, Team, Week
 from database.extra_models import SpecialLock, SpecialPick
 from services.espn_compat import find_first_kickoff
 
+from utils.team_data import NCAA_CONFERENCES
 
 # Automatic lock anchors.  Manual admin overrides in special_locks take priority.
 # CFB postseason conference picks lock at the first conference-championship-week
@@ -280,6 +281,11 @@ def save_conference_pick(user_id, period, conference, selection):
     finally:
         db.close()
 
+def get_all_fbs_teams():
+    teams = set()
+    for conference_teams in NCAA_CONFERENCES.values():
+        teams.update(conference_teams)
+    return sorted(teams)
 
 def get_team_names(sport=None):
     db = SessionLocal()

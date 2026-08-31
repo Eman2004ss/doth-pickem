@@ -18,6 +18,7 @@ from services.special_pick_service import (
     save_ranked_picks,
     save_special_pick,
     set_special_lock,
+    get_all_fbs_teams,
 )
 from services.special_scoring_service import get_outcome, score_all_special_picks, set_outcome
 from utils.ui_helpers import dark_page_container
@@ -128,7 +129,7 @@ def special_picks_page():
             ui.label("CFP Preseason Champion Picks").classes("text-h5").style("color:white;font-weight:bold;")
             status, locked = _lock_text("cfp_preseason", "preseason")
             ui.label(status).style("color:#ef4444;font-weight:bold;" if locked else "color:#facc15;")
-            cfp_teams = get_team_names("ncaa")
+            cfp_teams = get_all_fbs_teams()
             existing = {row.rank: row.selection for row in get_special_picks(user_id, "cfp_preseason", "preseason")}
             cfp_selects = []
             for rank in range(1, 4):
