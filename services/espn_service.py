@@ -11,6 +11,7 @@ from database.models import (
 NCAA_SCOREBOARD_URL = (
     "https://site.api.espn.com/apis/site/v2/sports/"
     "football/college-football/scoreboard"
+    "?groups=80&limit=500"
 )
 
 NFL_SCOREBOARD_URL = (
