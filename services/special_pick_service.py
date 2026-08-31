@@ -293,34 +293,14 @@ def get_team_names(sport=None):
 
 
 def get_nfl_teams(conference=None):
-    teams = get_team_names("nfl")
-    if not teams:
-        teams = sorted(NFL_CONFERENCE)
     if conference:
-        filtered = [team for team in teams if NFL_CONFERENCE.get(team) == conference]
-        return filtered or sorted(team for team, conf in NFL_CONFERENCE.items() if conf == conference)
-    return teams
+        return sorted(team for team, conf in NFL_CONFERENCE.items() if conf == conference)
+    return sorted(NFL_CONFERENCE)
 
+from utils.team_data import NCAA_CONFERENCES
 
 def get_cfb_conference_teams(conference):
-    aliases = {
-        "Big Ten": {"big ten", "big10", "big 10", "b1g"},
-        "SEC": {"sec", "southeastern"},
-        "ACC": {"acc", "atlantic coast"},
-        "Big 12": {"big 12", "big12"},
-    }
-    db = SessionLocal()
-    try:
-        ncaa = db.query(Team).filter(Team.sport == "ncaa").all()
-        wanted = aliases.get(conference, {_norm(conference)})
-        matches = [
-            team.team_name
-            for team in ncaa
-            if _norm(team.conference) in {_norm(value) for value in wanted}
-        ]
-        return sorted(set(matches)) or sorted({team.team_name for team in ncaa if team.team_name})
-    finally:
-        db.close()
+    return NCAA_CONFERENCES.get(conference, [])
 
 
 def lock_expired_special_picks():
