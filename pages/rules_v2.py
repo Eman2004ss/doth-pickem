@@ -80,24 +80,6 @@ def rules_page():
             )
 
         with ui.card().classes("w-full").style(CARD):
-            ui.label("NFL Midseason & Postseason Super Bowl Picks").classes("text-h5").style("color:white;font-weight:bold;")
-            ui.label("Choose one AFC and one NFC team before Week 10, then again before the playoffs.").style("color:#d1d5db;")
-            _table(
-                ["Midseason result", "No bye", "With bye"],
-                [
-                    ["Did not qualify", -10, -10], ["Wild Card", 0, -5], ["Divisional", 3, 3],
-                    ["Conference", 6, 6], ["Super Bowl", 9, 9], ["Champion", 15, 15],
-                ],
-            )
-            _table(
-                ["Postseason result", "No bye", "With bye"],
-                [
-                    ["Wild Card / DNQ", -8, -8], ["Divisional", 0, -8], ["Conference", 3, 3],
-                    ["Super Bowl", 6, 6], ["Champion", 12, 12],
-                ],
-            )
-
-        with ui.card().classes("w-full").style(CARD):
             ui.label("NFL Preseason Division Champions").classes("text-h5").style("color:white;font-weight:bold;")
             ui.label("Choose the winner of all 8 NFL divisions before Week 1. Each correct division winner is worth 4 points (32 possible).").style("color:#d1d5db;")
 
