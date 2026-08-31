@@ -152,73 +152,81 @@ def special_picks_page():
                 cfp_button.disable()
 
         # ------------------------------------------------------------------
-        # NFL preseason Super Bowl candidate rankings
+        # NFL Super Bowl champion picks (preseason / midseason / postseason)
         # ------------------------------------------------------------------
         with ui.card().classes("w-full").style(CARD):
-            ui.label("NFL Preseason Super Bowl Picks").classes("text-h5").style("color:white;font-weight:bold;")
-            ui.label("Rank four different teams. The four must contain exactly 2 AFC and 2 NFC teams.").style("color:#d1d5db;")
-            status, locked = _lock_text("nfl_preseason", "preseason")
-            ui.label(status).style("color:#ef4444;font-weight:bold;" if locked else "color:#facc15;")
-            nfl_teams = get_nfl_teams()
-            existing = {row.rank: row.selection for row in get_special_picks(user_id, "nfl_preseason", "preseason")}
-            nfl_rank_selects = []
-            for rank in range(1, 5):
-                select = ui.select(
-                    options=nfl_teams,
-                    value=existing.get(rank),
-                    label=f"Rank {rank}",
-                    with_input=True,
-                ).classes("w-full")
-                nfl_rank_selects.append(select)
-                if locked:
-                    select.disable()
-            nfl_pre_button = ui.button(
-                "Save NFL Preseason Picks",
-                on_click=lambda: _notify(
-                    save_ranked_picks(user_id, "nfl_preseason", "preseason", [select.value for select in nfl_rank_selects])
-                ),
-            )
-            if locked:
-                nfl_pre_button.disable()
-
-        # ------------------------------------------------------------------
-        # NFL midseason/postseason AFC + NFC champion guesses
-        # ------------------------------------------------------------------
-        with ui.card().classes("w-full").style(CARD):
-            ui.label("NFL Midseason / Postseason Super Bowl Picks").classes("text-h5").style("color:white;font-weight:bold;")
+            ui.label("NFL Super Bowl Picks").classes("text-h5").style("color:white;font-weight:bold;")
             nfl_period = ui.select(
-                options={"midseason": "Midseason", "postseason": "Postseason"},
-                value="midseason",
+                options={"preseason": "Preseason", "midseason": "Midseason", "postseason": "Postseason"},
+                value="preseason",
                 label="Pick period",
             )
-            nfl_midpost_container = ui.column().classes("w-full")
+            nfl_container = ui.column().classes("w-full")
 
-            def render_nfl_midpost():
-                nfl_midpost_container.clear()
-                period = nfl_period.value or "midseason"
-                status, locked = _lock_text("nfl_champion", period)
-                with nfl_midpost_container:
-                    ui.label(status).style("color:#ef4444;font-weight:bold;" if locked else "color:#facc15;")
-                    for conference in ("AFC", "NFC"):
-                        current = get_special_pick(user_id, "nfl_champion", period, conference)
-                        select = ui.select(
-                            options=get_nfl_teams(conference),
-                            value=current.selection if current else None,
-                            label=f"{conference} guess",
-                            with_input=True,
-                        ).classes("w-full")
-                        button = ui.button(
-                            f"Save {conference}",
-                            on_click=lambda select=select, conference=conference, period=period: _notify(
-                                save_special_pick(user_id, "nfl_champion", period, conference, select.value)
+            def render_nfl():
+                nfl_container.clear()
+                period = nfl_period.value or "preseason"
+
+                with nfl_container:
+                    if period == "preseason":
+                        ui.label(
+                            "Rank four different teams. The four must contain exactly 2 AFC and 2 NFC teams."
+                        ).style("color:#d1d5db;")
+                        status, locked = _lock_text("nfl_preseason", "preseason")
+                        ui.label(status).style("color:#ef4444;font-weight:bold;" if locked else "color:#facc15;")
+                        nfl_teams = get_nfl_teams()
+                        existing = {
+                            row.rank: row.selection
+                            for row in get_special_picks(user_id, "nfl_preseason", "preseason")
+                        }
+                        nfl_rank_selects = []
+                        for rank in range(1, 5):
+                            select = ui.select(
+                                options=nfl_teams,
+                                value=existing.get(rank),
+                                label=f"Rank {rank}",
+                                with_input=True,
+                            ).classes("w-full")
+                            nfl_rank_selects.append(select)
+                            if locked:
+                                select.disable()
+                        nfl_pre_button = ui.button(
+                            "Save NFL Preseason Picks",
+                            on_click=lambda: _notify(
+                                save_ranked_picks(
+                                    user_id,
+                                    "nfl_preseason",
+                                    "preseason",
+                                    [select.value for select in nfl_rank_selects],
+                                )
                             ),
                         )
                         if locked:
-                            select.disable()
-                            button.disable()
+                            nfl_pre_button.disable()
+                    else:
+                        status, locked = _lock_text("nfl_champion", period)
+                        ui.label(status).style("color:#ef4444;font-weight:bold;" if locked else "color:#facc15;")
+                        for conference in ("AFC", "NFC"):
+                            current = get_special_pick(user_id, "nfl_champion", period, conference)
+                            select = ui.select(
+                                options=get_nfl_teams(conference),
+                                value=current.selection if current else None,
+                                label=f"{conference} guess",
+                                with_input=True,
+                            ).classes("w-full")
+                            button = ui.button(
+                                f"Save {conference}",
+                                on_click=lambda select=select, conference=conference, period=period: _notify(
+                                    save_special_pick(user_id, "nfl_champion", period, conference, select.value)
+                                ),
+                            )
+                            if locked:
+                                select.disable()
+                                button.disable()
 
-            nfl_period.on("update:model-value", lambda e: render_nfl_midpost())
-            render_nfl_midpost()
+            nfl_period.on("update:model-value", lambda e: render_nfl())
+            render_nfl()
+        
 
         # ------------------------------------------------------------------
         # NFL division winners
