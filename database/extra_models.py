@@ -95,3 +95,22 @@ class SpecialBonus(Base):
     points = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class PlayoffGame(Base):
+    __tablename__ = "playoff_games"
+    __table_args__ = (
+        UniqueConstraint(
+            "sport", "round_key", "slot",
+            name="uq_playoff_game_sport_round_slot",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    sport = Column(String, nullable=False)       # "cfb" or "nfl"
+    round_key = Column(String, nullable=False)    # e.g. "first_round", "wild_card"
+    slot = Column(Integer, nullable=False)        # game number within the round, 1-indexed
+    team1 = Column(String, default="TBD", nullable=False)
+    team2 = Column(String, default="TBD", nullable=False)
+    winner = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
