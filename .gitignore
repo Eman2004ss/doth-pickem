@@ -1,1 +1,13 @@
+# Local-only database fallback
 database/dothpick.db
+
+# Local environment variables / Neon credentials
+.env
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Editor / OS noise
+.vscode/
+.DS_Store

@@ -2,7 +2,8 @@ from database.db import SessionLocal
 
 from database.models import (
     Game,
-    Team
+    Team,
+    Pick
 )
 
 
@@ -558,6 +559,18 @@ def delete_game(game_id):
         )
 
         if not game:
+            return False
+
+        # Do not remove a game after its picks have become part of history.
+        has_locked_picks = (
+            db.query(Pick)
+            .filter(Pick.game_id == game.id)
+            .filter(Pick.locked == True)
+            .first()
+            is not None
+        )
+
+        if game.locked or game.completed or has_locked_picks:
             return False
 
         db.delete(game)
