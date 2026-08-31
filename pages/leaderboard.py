@@ -213,9 +213,3 @@ def leaderboard_page():
                     ).style(
                         "color: #d1d5db;"
                     )
-
-                    ui.label(
-                        f"✅ Correct: {row.correct_picks}"
-                    ).style(
-                        "color: #d1d5db;"
-                    )
