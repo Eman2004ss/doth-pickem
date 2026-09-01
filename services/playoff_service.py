@@ -1,5 +1,5 @@
 from database.db import SessionLocal
-from database.extra_models import PlayoffGame
+from database.extra_models import PlayoffGame, PlayoffPick
 
 
 BRACKETS = {
@@ -104,5 +104,52 @@ def save_playoff_game(sport, round_key, slot, team1, team2, winner=None):
     except Exception as error:
         db.rollback()
         return False, f"Unable to save: {error}"
+    finally:
+        db.close()
+
+
+def get_user_playoff_picks(user_id, sport):
+    """Return {(round_key, slot): selection} for this user's picks in a sport."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(PlayoffPick)
+            .filter(PlayoffPick.user_id == user_id)
+            .filter(PlayoffPick.sport == sport)
+            .all()
+        )
+        return {(row.round_key, row.slot): row.selection for row in rows}
+    finally:
+        db.close()
+
+
+def save_playoff_pick(user_id, sport, round_key, slot, selection):
+    if not selection or selection.strip().upper() == "TBD":
+        return False, "That team isn't set yet."
+
+    db = SessionLocal()
+    try:
+        row = (
+            db.query(PlayoffPick)
+            .filter(PlayoffPick.user_id == user_id)
+            .filter(PlayoffPick.sport == sport)
+            .filter(PlayoffPick.round_key == round_key)
+            .filter(PlayoffPick.slot == slot)
+            .first()
+        )
+        if not row:
+            row = PlayoffPick(
+                user_id=user_id,
+                sport=sport,
+                round_key=round_key,
+                slot=slot,
+            )
+            db.add(row)
+        row.selection = selection.strip()
+        db.commit()
+        return True, "Pick saved."
+    except Exception as error:
+        db.rollback()
+        return False, f"Unable to save pick: {error}"
     finally:
         db.close()

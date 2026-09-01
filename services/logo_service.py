@@ -175,7 +175,6 @@ def get_logo_path(team_id):
     db = SessionLocal()
 
     try:
-
         team = (
             db.query(Team)
             .filter(
@@ -341,6 +340,34 @@ def update_all_missing_logos():
         db.rollback()
 
         return 0
+
+    finally:
+
+        db.close()
+
+def get_logo_path_by_name(team_name):
+    """Look up a logo the same way get_logo_path does, but by team name
+    instead of team_id -- used by features (like the playoff bracket) that
+    only store plain team-name strings rather than a foreign key."""
+
+    if not team_name or team_name.strip().upper() == "TBD":
+        return DEFAULT_LOGO
+
+    db = SessionLocal()
+
+    try:
+
+        team = (
+            db.query(Team)
+            .filter(Team.team_name == team_name)
+            .first()
+        )
+
+        if not team:
+            local_logo = find_local_logo_for_team(team_name)
+            return local_logo or DEFAULT_LOGO
+
+        return get_logo_path(team.id)
 
     finally:
 

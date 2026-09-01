@@ -31,10 +31,6 @@ from services.logo_service import (
     download_logo
 )
 
-from services.rules_service import (
-    save_rules_workbook_from_upload
-)
-
 from utils.constants import (
     VALID_TIERS,
     GAMES_PER_WEEK
@@ -689,85 +685,6 @@ def admin_page():
         ui.separator().style(
             "background-color: #333333; margin-top: 18px;"
         )
-
-        with ui.card().classes(
-            "w-full"
-        ).style(
-            """
-            background-color: #151515;
-            color: white;
-            border: 1px solid #333333;
-            border-radius: 14px;
-            padding: 18px;
-            margin-top: 18px;
-            """
-        ):
-
-            ui.label(
-                "Upload Updated Rules Workbook"
-            ).classes(
-                "text-h5"
-            ).style(
-                "color: white;"
-            )
-
-            ui.label(
-                "Upload the updated Excel workbook. The Rules page will read the Master Plan - Football Season sheet."
-            ).style(
-                "color: #d1d5db;"
-            )
-
-            upload_status = ui.label(
-                ""
-            ).style(
-                "color: #d1d5db;"
-            )
-
-            def handle_rules_upload(upload_event):
-
-                success = save_rules_workbook_from_upload(
-                    upload_event
-                )
-
-                if success:
-
-                    upload_status.set_text(
-                        "Rules workbook uploaded successfully."
-                    )
-
-                    upload_status.style(
-                        "color: #22c55e;"
-                    )
-
-                    ui.notify(
-                        "Rules workbook uploaded.",
-                        color="positive"
-                    )
-
-                else:
-
-                    upload_status.set_text(
-                        "Upload failed. Make sure the file is a valid .xlsx workbook."
-                    )
-
-                    upload_status.style(
-                        "color: #ef4444;"
-                    )
-
-                    ui.notify(
-                        "Rules workbook upload failed.",
-                        color="negative"
-                    )
-
-            ui.upload(
-                label="Upload Rules Workbook",
-                on_upload=handle_rules_upload,
-                auto_upload=True
-            ).props(
-                "accept=.xlsx"
-            ).classes(
-                "w-full"
-            )
 
         ui.separator().style(
             "background-color: #333333; margin-top: 18px;"

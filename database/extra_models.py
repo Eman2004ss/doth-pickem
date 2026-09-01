@@ -115,3 +115,22 @@ class PlayoffGame(Base):
     winner = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PlayoffPick(Base):
+    __tablename__ = "playoff_picks"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "sport", "round_key", "slot",
+            name="uq_playoff_pick_user_sport_round_slot",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    sport = Column(String, nullable=False)
+    round_key = Column(String, nullable=False)
+    slot = Column(Integer, nullable=False)
+    selection = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
