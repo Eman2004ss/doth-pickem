@@ -1,6 +1,8 @@
 from database.db import SessionLocal
 
 from database.models import (
+    Game,
+    Pick,
     User,
     Leaderboard
 )
@@ -235,33 +237,18 @@ def get_user_points(user_id):
 
 
 def get_user_accuracy(user_id):
-
+    """Return pick accuracy using only games that have concluded."""
     db = SessionLocal()
-
     try:
-
-        leaderboard = (
-            db.query(Leaderboard)
-            .filter(
-                Leaderboard.user_id == user_id
-            )
-            .first()
+        picks = (
+            db.query(Pick)
+            .join(Game, Pick.game_id == Game.id)
+            .filter(Pick.user_id == user_id, Game.completed == True)
+            .all()
         )
-
-        if not leaderboard:
+        if not picks:
             return 0
-
-        if leaderboard.total_picks == 0:
-            return 0
-
-        return round(
-            (
-                leaderboard.correct_picks
-                / leaderboard.total_picks
-            ) * 100,
-            1
-        )
-
+        correct_picks = sum(1 for pick in picks if pick.is_correct)
+        return round(correct_picks / len(picks) * 100, 1)
     finally:
-
         db.close()

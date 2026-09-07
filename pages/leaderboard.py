@@ -1,7 +1,8 @@
 from nicegui import ui
 
 from services.leaderboard_service import (
-    get_leaderboard
+    get_leaderboard,
+    get_user_accuracy
 )
 
 from services.user_service import (
@@ -48,17 +49,7 @@ def leaderboard_page():
             if not user:
                 continue
 
-            accuracy = 0
-
-            if row.total_picks > 0:
-
-                accuracy = round(
-                    (
-                        row.correct_picks
-                        / row.total_picks
-                    ) * 100,
-                    1
-                )
+            accuracy = get_user_accuracy(row.user_id)
 
             rank_color = "#ffffff"
             border_color = "#333333"
@@ -141,7 +132,7 @@ def leaderboard_page():
                     with ui.column():
 
                         ui.label(
-                            "Accuracy"
+                            "Accuracy (completed games)"
                         ).style(
                             "color: #9ca3af;"
                         )

@@ -11,6 +11,7 @@ from services.special_pick_service import (
     get_cfb_conference_teams,
     get_nfl_teams,
     get_special_lock_time,
+    get_public_special_picks,
     get_special_pick,
     get_special_picks,
     is_special_locked,
@@ -59,6 +60,28 @@ def _lock_text(category, period):
 def _notify(result):
     success, message = result
     ui.notify(message, color="positive" if success else "negative")
+
+
+
+def _render_public_picks(category, period):
+    ui.separator()
+    ui.label("Everyone's Picks").classes("text-h6").style("color:white;")
+    if not is_special_locked(category, period):
+        ui.label("Everyone's picks will appear here once this category locks.").style("color:#d1d5db;")
+        return
+    rows = get_public_special_picks(category, period)
+    if not rows:
+        ui.label("No picks were submitted for this category.").style("color:#d1d5db;")
+        return
+    ui.table(
+        columns=[
+            {"name": "username", "label": "Player", "field": "username", "align": "left", "sortable": True},
+            {"name": "slot", "label": "Pick", "field": "slot", "align": "left"},
+            {"name": "selection", "label": "Team", "field": "selection", "align": "left"},
+        ],
+        rows=rows,
+        row_key="id",
+    ).classes("w-full")
 
 
 def special_picks_page():
@@ -118,6 +141,8 @@ def special_picks_page():
                                 select.disable()
                                 button.disable()
 
+                    _render_public_picks("cfb_conference", period)
+
             cfb_period.on("update:model-value", lambda e: render_cfb())
             render_cfb()
 
@@ -149,6 +174,7 @@ def special_picks_page():
             )
             if locked:
                 cfp_button.disable()
+            _render_public_picks("cfp_preseason", "preseason")
 
         # ------------------------------------------------------------------
         # NFL preseason Super Bowl candidate rankings
@@ -179,6 +205,7 @@ def special_picks_page():
             )
             if locked:
                 nfl_pre_button.disable()
+            _render_public_picks("nfl_preseason", "preseason")
 
         # ------------------------------------------------------------------
         # NFL division winners
@@ -205,6 +232,8 @@ def special_picks_page():
                     if locked:
                         select.disable()
                         button.disable()
+
+            _render_public_picks("nfl_division", "preseason")
 
         if is_admin:
             _render_admin_controls()

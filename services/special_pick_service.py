@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 import re
 
 from database.db import SessionLocal
-from database.models import Game, Team, Week
+from database.models import Game, Team, User, Week
 from database.extra_models import SpecialLock, SpecialPick
 from services.espn_compat import find_first_kickoff
 from utils.team_data import NCAA_CONFERENCES
@@ -173,6 +173,30 @@ def get_special_picks(user_id=None, category=None, period=None):
         if period is not None:
             query = query.filter(SpecialPick.period == period)
         return query.order_by(SpecialPick.category, SpecialPick.period, SpecialPick.slot).all()
+    finally:
+        db.close()
+
+
+
+def get_public_special_picks(category, period):
+    """Reveal a category's picks only after its effective lock has passed."""
+    if not is_special_locked(category, period):
+        return []
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(SpecialPick, User.username)
+            .join(User, SpecialPick.user_id == User.id)
+            .filter(SpecialPick.category == category, SpecialPick.period == period)
+            .order_by(User.username, SpecialPick.rank, SpecialPick.slot)
+            .all()
+        )
+        return [
+            {"id": pick.id, "username": username,
+             "slot": f"Rank {pick.rank}" if pick.rank else pick.slot,
+             "selection": pick.selection}
+            for pick, username in rows
+        ]
     finally:
         db.close()
 
