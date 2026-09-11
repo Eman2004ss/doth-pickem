@@ -4,7 +4,7 @@ from utils.team_data import (
     NFL_DIVISIONS
 )
 from nicegui import app, ui
-from services.admin_game_service import remove_game_as_admin
+from services.admin_game_service import remove_game_as_admin, update_game_tier_as_admin
 from services.export_service import (
     export_picks_to_excel
 )
@@ -34,6 +34,9 @@ from services.logo_service import (
 
 from utils.constants import (
     VALID_TIERS,
+    TIER_POINTS,
+    RIVALRY_WEEK_NUMBERS,
+    RIVALRY_GAME_POINTS,
     GAMES_PER_WEEK
 )
 
@@ -298,6 +301,32 @@ def admin_page():
                 if success:
                     load_weeks()
 
+        def edit_game_tier(game_id, current_tier, matchup, week_number):
+            with ui.dialog() as dialog, ui.card().classes("w-full max-w-md"):
+                ui.label(f"Edit tier: {matchup}").classes("text-h6")
+                tier_select = ui.select(
+                    options={tier: f"{tier} — {TIER_POINTS[tier]} points" for tier in VALID_TIERS},
+                    value="F" if current_tier == "E" else current_tier,
+                    label="Game tier",
+                ).classes("w-full")
+                if week_number in RIVALRY_WEEK_NUMBERS:
+                    ui.label(f"Rivalry week: every game remains worth {RIVALRY_GAME_POINTS} points regardless of tier.")
+                ui.label("Saving recalculates awarded points, the weekly bonus, and the leaderboard. Players’ team selections stay the same.")
+
+                def save_tier():
+                    success, message = update_game_tier_as_admin(
+                        game_id, tier_select.value, app.storage.user.get("user_id")
+                    )
+                    ui.notify(message, color="positive" if success else "negative")
+                    if success:
+                        dialog.close()
+                        load_weeks()
+
+                with ui.row().classes("w-full justify-end"):
+                    ui.button("Cancel", on_click=dialog.close)
+                    ui.button("Save tier", on_click=save_tier)
+            dialog.open()
+
         def load_weeks():
 
             weeks_container.clear()
@@ -453,6 +482,11 @@ def admin_page():
                                     color: {status_color};
                                     font-weight: bold;
                                     """
+                                )
+
+                                ui.button(
+                                    "Edit tier", icon="edit",
+                                    on_click=lambda game_id=game.id, tier=game.tier, matchup=f"{away_name} vs {home_name}", number=week.week_number: edit_game_tier(game_id, tier, matchup, number),
                                 )
 
                                 ui.button(
