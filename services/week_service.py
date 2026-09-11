@@ -101,7 +101,7 @@ def get_all_weeks():
         return (
             db.query(Week)
             .order_by(
-                Week.week_number
+                Week.week_number.desc()
             )
             .all()
         )

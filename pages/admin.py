@@ -72,9 +72,10 @@ def admin_page():
             "color: #d1d5db;"
         )
 
+        weeks = get_all_weeks()
         week_number = ui.number(
             label="Week Number",
-            value=1,
+            value=weeks[0].week_number if weeks else 1,
             precision=0
         )
 
@@ -492,6 +493,7 @@ def admin_page():
             created_games = 0
             matched_games = 0
             unmatched_games = 0
+            failed_games = 0
 
             for game_data in game_inputs:
 
@@ -669,9 +671,7 @@ def admin_page():
 
                 game = create_game(
                     week_id=week.id,
-                    game_number=game_data[
-                        "game_number"
-                    ],
+                    game_number=None,
                     tier=game_data[
                         "tier"
                     ].value,
@@ -685,10 +685,16 @@ def admin_page():
                 if game:
 
                     created_games += 1
+                    game_data["away_team"].set_value(None)
+                    game_data["home_team"].set_value(None)
+                else:
+                    failed_games += 1
+                    result_label.set_text("Unable to save game. Your entry has been kept; please try again.")
+                    result_label.style("color: #ef4444;")
 
             ui.notify(
-                f"{created_games} games saved. {matched_games} ESPN matches, {unmatched_games} unmatched.",
-                color="positive"
+                f"{created_games} games saved. {failed_games} failed. {matched_games} ESPN matches, {unmatched_games} unmatched.",
+                color="negative" if failed_games else "positive"
             )
 
             load_weeks()

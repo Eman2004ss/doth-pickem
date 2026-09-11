@@ -3,7 +3,8 @@ from database.db import SessionLocal
 from database.models import (
     Game,
     Team,
-    Pick
+    Pick,
+    Week
 )
 
 
@@ -22,38 +23,32 @@ def create_game(
 
     try:
 
-        existing_game = (
-            db.query(Game)
-            .filter(
-                Game.week_id == week_id
-            )
-            .filter(
-                Game.game_number == game_number
-            )
-            .first()
-        )
+        # Serialize additions within a week, including simultaneous admin saves.
+        week = db.query(Week).filter(Week.id == week_id).with_for_update().first()
+        if not week:
+            return None
 
-        if existing_game:
+        # A repeated save must not duplicate or alter a matchup and its picks.
+        existing_matchup = db.query(Game).filter(
+            Game.week_id == week_id,
+            Game.home_team_id == home_team_id,
+            Game.away_team_id == away_team_id,
+            Game.sport == sport,
+        ).first()
+        if existing_matchup:
+            return existing_matchup
 
-            existing_game.tier = tier
-            existing_game.home_team_id = home_team_id
-            existing_game.away_team_id = away_team_id
-            existing_game.kickoff_time = kickoff_time
-            existing_game.espn_event_id = espn_event_id
-
-            if hasattr(
-                existing_game,
-                "sport"
-            ):
-                existing_game.sport = sport
-
-            db.commit()
-
-            db.refresh(
-                existing_game
-            )
-
-            return existing_game
+        if game_number is None:
+            last_game = db.query(Game).filter(Game.week_id == week_id).order_by(
+                Game.game_number.desc()
+            ).first()
+            # Append after the highest number, not the count: deletions leave gaps.
+            # Do not renumber games, since their order determines the tiebreaker.
+            game_number = last_game.game_number + 1 if last_game else 1
+        elif db.query(Game).filter(
+            Game.week_id == week_id, Game.game_number == game_number
+        ).first():
+            return None  # Adding a game must never overwrite another matchup.
 
         game = Game(
             week_id=week_id,
