@@ -3,7 +3,8 @@ from utils.team_data import (
     NCAA_CONFERENCES,
     NFL_DIVISIONS
 )
-from nicegui import ui
+from nicegui import app, ui
+from services.admin_game_service import remove_game_as_admin
 from services.export_service import (
     export_picks_to_excel
 )
@@ -42,6 +43,10 @@ from utils.ui_helpers import (
 
 
 def admin_page():
+
+    if not app.storage.user.get("is_admin"):
+        ui.label("Administrator access required.")
+        return
 
     with dark_page_container():
 
@@ -279,6 +284,19 @@ def admin_page():
             "w-full"
         )
 
+        async def confirm_remove_game(game_id, matchup):
+            with ui.dialog() as dialog, ui.card():
+                ui.label(f"Remove {matchup}?").classes("text-h6")
+                ui.label("This permanently removes the game and everyone's picks for it, including awarded points. Weekly bonuses and standings will be recalculated. If this is the first game, its tiebreaker guesses will be cleared.").classes("max-w-md")
+                with ui.row().classes("w-full justify-end"):
+                    ui.button("Cancel", on_click=lambda: dialog.submit(False))
+                    ui.button("Remove game", color="negative", on_click=lambda: dialog.submit(True))
+            if await dialog:
+                success, message = remove_game_as_admin(game_id, app.storage.user.get("user_id"))
+                ui.notify(message, color="positive" if success else "negative")
+                if success:
+                    load_weeks()
+
         def load_weeks():
 
             weeks_container.clear()
@@ -435,6 +453,11 @@ def admin_page():
                                     font-weight: bold;
                                     """
                                 )
+
+                                ui.button(
+                                    "Remove game", icon="delete", color="negative",
+                                    on_click=lambda game_id=game.id, matchup=f"{away_name} vs {home_name}": confirm_remove_game(game_id, matchup),
+                                ).classes("ml-auto")
 
         def save_week():
 

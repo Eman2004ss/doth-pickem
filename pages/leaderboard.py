@@ -132,7 +132,7 @@ def leaderboard_page():
                     with ui.column():
 
                         ui.label(
-                            "Accuracy (completed games)"
+                            "Accuracy"
                         ).style(
                             "color: #9ca3af;"
                         )
