@@ -5,7 +5,11 @@ from utils.team_data import (
     NHL_DIVISIONS,
 )
 from nicegui import app, ui
-from services.admin_game_service import remove_game_as_admin, update_game_tier_as_admin
+from services.admin_game_service import (
+    remove_game_as_admin,
+    update_game_tier_as_admin,
+    update_game_details_as_admin,
+)
 from services.export_service import (
     export_picks_to_excel
 )
@@ -259,13 +263,7 @@ def admin_page():
                         away_team.set_value(away_name)
                         home_team.set_value(home_name)
 
-                        sport.disable()
-                        away_conference.disable()
-                        away_team.disable()
-                        home_conference.disable()
-                        home_team.disable()
-                        tier.disable()
-                        result_label.set_text("Existing game — preserved. Use Edit tier below if needed.")
+                        result_label.set_text("Existing game — edit any field, then save the week.")
                         result_label.style("color: #60a5fa;")
 
                     return game_data
@@ -565,9 +563,6 @@ def admin_page():
 
             for game_data in game_inputs:
 
-                if game_data.get("existing_game_id"):
-                    continue
-
                 result_label = game_data[
                     "result_label"
                 ]
@@ -631,6 +626,12 @@ def admin_page():
                 if event:
 
                     matched_games += 1
+
+                    # If the admin entered the teams in the opposite home/away
+                    # order, use ESPN's official orientation automatically.
+                    if event.get("orientation") == "reversed":
+                        away_team, home_team = home_team, away_team
+                        away_name, home_name = home_name, away_name
 
                     espn_event_id = event.get(
                         "event_id"
@@ -717,28 +718,52 @@ def admin_page():
                         "color: #facc15;"
                     )
 
-                game = create_game(
-                    week_id=week.id,
-                    game_number=None,
-                    tier=game_data[
-                        "tier"
-                    ].value,
-                    home_team_id=home_team.id,
-                    away_team_id=away_team.id,
-                    kickoff_time=kickoff_time,
-                    espn_event_id=espn_event_id,
-                    sport=selected_sport
-                )
+                existing_game_id = game_data.get("existing_game_id")
 
-                if game:
-
-                    created_games += 1
-                    game_data["away_team"].set_value(None)
-                    game_data["home_team"].set_value(None)
+                if existing_game_id:
+                    success, message = update_game_details_as_admin(
+                        game_id=existing_game_id,
+                        admin_user_id=app.storage.user.get("user_id"),
+                        tier=game_data["tier"].value,
+                        sport=selected_sport,
+                        home_team_id=home_team.id,
+                        away_team_id=away_team.id,
+                        kickoff_time=kickoff_time,
+                        espn_event_id=espn_event_id,
+                    )
+                    if success:
+                        created_games += 1
+                        result_label.set_text(
+                            f"Existing game updated. "
+                            f"{'ESPN linked.' if espn_event_id else 'No ESPN match found.'}"
+                        )
+                        result_label.style(
+                            "color: #22c55e;" if espn_event_id else "color: #facc15;"
+                        )
+                    else:
+                        failed_games += 1
+                        result_label.set_text(message)
+                        result_label.style("color: #ef4444;")
                 else:
-                    failed_games += 1
-                    result_label.set_text("Unable to save game. Your entry has been kept; please try again.")
-                    result_label.style("color: #ef4444;")
+                    game = create_game(
+                        week_id=week.id,
+                        game_number=None,
+                        tier=game_data["tier"].value,
+                        home_team_id=home_team.id,
+                        away_team_id=away_team.id,
+                        kickoff_time=kickoff_time,
+                        espn_event_id=espn_event_id,
+                        sport=selected_sport
+                    )
+
+                    if game:
+                        created_games += 1
+                        game_data["away_team"].set_value(None)
+                        game_data["home_team"].set_value(None)
+                    else:
+                        failed_games += 1
+                        result_label.set_text("Unable to save game. Your entry has been kept; please try again.")
+                        result_label.style("color: #ef4444;")
 
             ui.notify(
                 f"{created_games} games saved. {failed_games} failed. {matched_games} ESPN matches, {unmatched_games} unmatched.",

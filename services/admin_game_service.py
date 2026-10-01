@@ -117,3 +117,95 @@ def update_game_tier_as_admin(game_id, tier, admin_user_id):
         return False, "Unable to update tier. No changes were saved."
     finally:
         db.close()
+
+
+def update_game_details_as_admin(
+    game_id,
+    admin_user_id,
+    tier,
+    sport,
+    home_team_id,
+    away_team_id,
+    kickoff_time=None,
+    espn_event_id=None,
+):
+    """Edit an existing game in place without silently invalidating picks."""
+    from services.scoring_service import get_game_points
+    from utils.constants import VALID_TIERS
+
+    db = SessionLocal()
+    try:
+        admin = db.get(User, admin_user_id) if admin_user_id else None
+        if not admin or not admin.is_admin:
+            return False, "Only administrators can edit games."
+
+        game = db.query(Game).filter(Game.id == game_id).with_for_update().first()
+        if not game:
+            return False, "This game no longer exists."
+
+        tier = str(tier or "").strip().upper()
+        sport = str(sport or "ncaa").strip().lower()
+        if tier not in VALID_TIERS:
+            return False, "Choose a valid tier."
+
+        matchup_changed = (
+            game.home_team_id != home_team_id
+            or game.away_team_id != away_team_id
+            or (game.sport or "ncaa").lower() != sport
+        )
+
+        picks = db.query(Pick).filter(Pick.game_id == game.id).all()
+        if matchup_changed and picks:
+            return False, (
+                "This matchup already has picks. Remove/recreate the game only if you "
+                "intend to remove those picks; otherwise keep the same teams."
+            )
+
+        if matchup_changed and (game.locked or game.completed):
+            return False, "A locked or completed game cannot have its matchup changed."
+
+        previous_tier = game.tier
+        game.tier = tier
+        game.sport = sport
+        game.home_team_id = home_team_id
+        game.away_team_id = away_team_id
+        game.kickoff_time = kickoff_time
+        game.espn_event_id = espn_event_id
+        game.source = "espn" if espn_event_id else "manual"
+
+        if not game.completed:
+            game.home_score = 0
+            game.away_score = 0
+            game.winner_team_id = None
+            game.game_status = "Scheduled"
+
+        if previous_tier != tier and picks:
+            points = get_game_points(tier, game.week.week_number)
+            for pick in picks:
+                if game.completed:
+                    pick.is_correct = (
+                        game.winner_team_id is not None
+                        and pick.selected_team_id == game.winner_team_id
+                    )
+                    pick.points_awarded = points if pick.is_correct else 0
+                else:
+                    pick.is_correct = None
+                    pick.points_awarded = 0
+
+        db.flush()
+        _recalculate_week_and_standings(db, game.week_id, game.week.week_number)
+        db.add(SystemLog(
+            log_type="admin_game_edit",
+            message=(
+                f"Admin {admin.id} edited game {game.id} in week "
+                f"{game.week.week_number}; matchup_changed={matchup_changed}."
+            ),
+        ))
+        db.commit()
+        return True, "Game saved."
+    except Exception as error:
+        db.rollback()
+        print(f"admin game edit error: {error}")
+        return False, "Unable to update game. No changes were saved."
+    finally:
+        db.close()

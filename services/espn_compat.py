@@ -152,18 +152,33 @@ def _event_result(event, sport):
     }
 
 
-def _event_matches(event, away_name, home_name):
+def _event_orientation(event, away_name, home_name):
+    """Return normal/reversed when the two selected teams match an ESPN event."""
     away, home = _event_competitors(event)
     if not away or not home:
-        return False
+        return None
+
     away_team = away.get("team") or {}
     home_team = home.get("team") or {}
 
-    # Keep home/away orientation strict. The rest of the app stores ESPN's
-    # home score against Game.home_team_id and ESPN's away score against
-    # Game.away_team_id; accepting a reversed matchup here could silently
-    # attach scores to the wrong database teams.
-    return _team_matches(away_name, away_team) and _team_matches(home_name, home_team)
+    if _team_matches(away_name, away_team) and _team_matches(home_name, home_team):
+        return "normal"
+
+    if _team_matches(away_name, home_team) and _team_matches(home_name, away_team):
+        return "reversed"
+
+    return None
+
+
+def _matched_result(event, away_name, home_name, sport):
+    orientation = _event_orientation(event, away_name, home_name)
+    if not orientation:
+        return None
+
+    result = _event_result(event, sport)
+    if result:
+        result["orientation"] = orientation
+    return result
 
 
 def _search_plan(sport):
@@ -212,8 +227,9 @@ def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
         current = legacy.get_scoreboard(sport)
         if current:
             for event in current.get("events", []):
-                if _event_matches(event, away_team_name, home_team_name):
-                    return _event_result(event, sport)
+                matched = _matched_result(event, away_team_name, home_team_name, sport)
+                if matched:
+                    return matched
     except Exception:
         pass
 
@@ -230,8 +246,9 @@ def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
         )
         if board:
             for event in board.get("events", []):
-                if _event_matches(event, away_team_name, home_team_name):
-                    return _event_result(event, sport)
+                matched = _matched_result(event, away_team_name, home_team_name, sport)
+                if matched:
+                    return matched
         return None
 
     year = datetime.now(timezone.utc).year
@@ -243,8 +260,9 @@ def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
                 if not board:
                     continue
                 for event in board.get("events", []):
-                    if _event_matches(event, away_team_name, home_team_name):
-                        return _event_result(event, sport)
+                    matched = _matched_result(event, away_team_name, home_team_name, sport)
+                    if matched:
+                        return matched
     return None
 
 
