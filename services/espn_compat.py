@@ -359,8 +359,8 @@ def _find_nhl_event_from_team_schedule(away_team_name, home_team_name):
     return past[0][1]
 
 
-def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
-    """Find a matchup anywhere in the relevant ESPN schedule."""
+def find_event_by_teams(away_team_name, home_team_name, sport="ncaa", game_date=None):
+    """Find a matchup in ESPN, using an exact date for NHL when supplied."""
     sport = (sport or "ncaa").lower()
 
     # Fast path: current scoreboard.
@@ -375,9 +375,33 @@ def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
         pass
 
     if sport == "nhl":
-        # Use the full team schedule first. This avoids depending on "today"
-        # or a fixed date window and works even when the selected matchup is
-        # several games down the team's schedule.
+        if game_date:
+            try:
+                if hasattr(game_date, "strftime"):
+                    target_day = game_date
+                else:
+                    target_day = datetime.fromisoformat(str(game_date)).date()
+            except Exception:
+                target_day = None
+
+            if target_day is not None:
+                board = _cached_nhl_scoreboard(target_day)
+                if board:
+                    for event in board.get("events", []):
+                        matched = _matched_result(
+                            event,
+                            away_team_name,
+                            home_team_name,
+                            sport,
+                        )
+                        if matched:
+                            return matched
+                # A selected NHL date is authoritative. Do not silently link
+                # the same teams from another date.
+                return None
+
+        # Without an explicit date, use the full team schedule as a fallback
+        # for automatic repair of previously saved unlinked games.
         scheduled = _find_nhl_event_from_team_schedule(
             away_team_name,
             home_team_name,
@@ -385,8 +409,6 @@ def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
         if scheduled:
             return scheduled
 
-        # Fallback to a broad scoreboard range in case ESPN's team schedule
-        # endpoint is temporarily incomplete.
         from datetime import timedelta
 
         today = datetime.now(timezone.utc).date()
