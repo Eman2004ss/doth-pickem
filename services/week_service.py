@@ -112,44 +112,41 @@ def get_all_weeks():
 
 
 def get_active_week():
+    """Return the latest numbered week that has at least one game.
 
+    The home page should track the newest week the admin has actually started,
+    not an older manually-active row or an empty future week.
+    """
     db = SessionLocal()
 
     try:
-
-        active_week = (
+        latest_week = (
             db.query(Week)
-            .filter(
-                Week.active == True
-            )
+            .join(Game, Game.week_id == Week.id)
+            .group_by(Week.id)
+            .order_by(Week.week_number.desc())
             .first()
         )
 
+        if latest_week:
+            return latest_week
+
+        # If no games exist yet, preserve the legacy active-week fallback.
+        active_week = (
+            db.query(Week)
+            .filter(Week.active == True)
+            .first()
+        )
         if active_week:
             return active_week
 
-        fallback_week = (
+        return (
             db.query(Week)
-            .order_by(
-                Week.week_number
-            )
+            .order_by(Week.week_number.desc())
             .first()
         )
 
-        if fallback_week:
-
-            fallback_week.active = True
-
-            db.commit()
-
-            db.refresh(fallback_week)
-
-            return fallback_week
-
-        return None
-
     finally:
-
         db.close()
 
 
