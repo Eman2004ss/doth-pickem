@@ -19,6 +19,11 @@ NFL_SCOREBOARD_URL = (
     "football/nfl/scoreboard"
 )
 
+NHL_SCOREBOARD_URL = (
+    "https://site.api.espn.com/apis/site/v2/sports/"
+    "hockey/nhl/scoreboard"
+)
+
 
 def get_scoreboard(
     sport="ncaa"
@@ -30,11 +35,10 @@ def get_scoreboard(
     ).lower()
 
     if selected_sport == "nfl":
-
         url = NFL_SCOREBOARD_URL
-
+    elif selected_sport == "nhl":
+        url = NHL_SCOREBOARD_URL
     else:
-
         url = NCAA_SCOREBOARD_URL
 
     try:
