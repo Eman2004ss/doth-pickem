@@ -46,6 +46,22 @@ def _summary_url(sport):
     )
 
 
+def _teams_url(sport):
+    category, league = _sport_path(sport)
+    return (
+        "https://site.api.espn.com/apis/site/v2/sports/"
+        f"{category}/{league}/teams"
+    )
+
+
+def _team_schedule_url(sport, team_id):
+    category, league = _sport_path(sport)
+    return (
+        "https://site.api.espn.com/apis/site/v2/sports/"
+        f"{category}/{league}/teams/{team_id}/schedule"
+    )
+
+
 def _normalize(value):
     if not value:
         return ""
@@ -218,6 +234,96 @@ def _cached_nhl_scoreboard(start_day, end_day=None):
     return payload
 
 
+def _cached_nhl_teams():
+    key = ("nhl-teams",)
+    now = time.time()
+    cached = _CACHE.get(key)
+    if cached and now - cached[0] < _CACHE_SECONDS:
+        return cached[1]
+
+    try:
+        response = _SESSION.get(
+            _teams_url("nhl"),
+            params={"limit": 100},
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except Exception:
+        payload = None
+
+    _CACHE[key] = (now, payload)
+    return payload
+
+
+def _iter_team_objects(payload):
+    """Yield ESPN team dictionaries from the /teams response."""
+    sports = (payload or {}).get("sports") or []
+    for sport in sports:
+        for league in sport.get("leagues") or []:
+            for item in league.get("teams") or []:
+                team = item.get("team") or item
+                if isinstance(team, dict):
+                    yield team
+
+
+def _find_nhl_team_id(team_name):
+    payload = _cached_nhl_teams()
+    for team in _iter_team_objects(payload):
+        if _team_matches(team_name, team):
+            team_id = team.get("id")
+            if team_id is not None:
+                return str(team_id)
+    return None
+
+
+def _cached_nhl_team_schedule(team_id):
+    key = ("nhl-team-schedule", str(team_id), datetime.now(timezone.utc).year)
+    now = time.time()
+    cached = _CACHE.get(key)
+    if cached and now - cached[0] < _CACHE_SECONDS:
+        return cached[1]
+
+    try:
+        response = _SESSION.get(
+            _team_schedule_url("nhl", team_id),
+            params={"season": datetime.now(timezone.utc).year},
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except Exception:
+        payload = None
+
+    _CACHE[key] = (now, payload)
+    return payload
+
+
+def _find_nhl_event_from_team_schedule(away_team_name, home_team_name):
+    """Search the selected teams' full NHL schedules, independent of game date."""
+    candidate_ids = []
+    for team_name in (away_team_name, home_team_name):
+        team_id = _find_nhl_team_id(team_name)
+        if team_id and team_id not in candidate_ids:
+            candidate_ids.append(team_id)
+
+    for team_id in candidate_ids:
+        schedule = _cached_nhl_team_schedule(team_id)
+        if not schedule:
+            continue
+        for event in schedule.get("events") or []:
+            matched = _matched_result(
+                event,
+                away_team_name,
+                home_team_name,
+                "nhl",
+            )
+            if matched:
+                return matched
+
+    return None
+
+
 def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
     """Find a matchup anywhere in the relevant ESPN schedule."""
     sport = (sport or "ncaa").lower()
@@ -234,15 +340,24 @@ def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
         pass
 
     if sport == "nhl":
-        # NHL schedules are date-oriented instead of week-oriented. Search a
-        # practical window around today so this week's admin additions link
-        # immediately, including near-future games.
+        # Use the full team schedule first. This avoids depending on "today"
+        # or a fixed date window and works even when the selected matchup is
+        # several games down the team's schedule.
+        scheduled = _find_nhl_event_from_team_schedule(
+            away_team_name,
+            home_team_name,
+        )
+        if scheduled:
+            return scheduled
+
+        # Fallback to a broad scoreboard range in case ESPN's team schedule
+        # endpoint is temporarily incomplete.
         from datetime import timedelta
 
         today = datetime.now(timezone.utc).date()
         board = _cached_nhl_scoreboard(
-            today - timedelta(days=7),
-            today + timedelta(days=28),
+            today - timedelta(days=31),
+            today + timedelta(days=120),
         )
         if board:
             for event in board.get("events", []):
@@ -290,14 +405,26 @@ def get_event_by_id(espn_event_id, sport="ncaa"):
     except Exception:
         pass
 
-    # Fallback to a schedule scan if ESPN's summary endpoint is unavailable.
+    # Fallback to NHL team schedules/scoreboard if ESPN's summary endpoint is unavailable.
     if (sport or "ncaa").lower() == "nhl":
+        teams = _cached_nhl_teams()
+        for team in _iter_team_objects(teams):
+            team_id = team.get("id")
+            if team_id is None:
+                continue
+            schedule = _cached_nhl_team_schedule(team_id)
+            if not schedule:
+                continue
+            for event in schedule.get("events") or []:
+                if str(event.get("id")) == str(espn_event_id):
+                    return event
+
         from datetime import timedelta
 
         today = datetime.now(timezone.utc).date()
         board = _cached_nhl_scoreboard(
-            today - timedelta(days=14),
-            today + timedelta(days=35),
+            today - timedelta(days=31),
+            today + timedelta(days=120),
         )
         if board:
             for event in board.get("events", []):
