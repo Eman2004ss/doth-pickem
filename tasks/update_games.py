@@ -48,13 +48,12 @@ def _apply_team_data(team, data, sport):
 
 
 def repair_unlinked_games():
-    """Try to attach ESPN event IDs to previously-unmatched future games."""
+    """Attach missing ESPN links and re-check future NHL links for bad dates."""
     db = SessionLocal()
     repaired_ids = []
     try:
         games = (
             db.query(Game)
-            .filter(Game.espn_event_id.is_(None))
             .filter(Game.completed == False)
             .all()
         )
@@ -66,6 +65,13 @@ def repair_unlinked_games():
                 continue
 
             sport = (game.sport or away.sport or home.sport or "ncaa").lower()
+
+            # Existing football links are stable; only retry an already-linked
+            # game when it is NHL, where an earlier schedule search may have
+            # selected the wrong season/meeting.
+            if game.espn_event_id is not None and sport != "nhl":
+                continue
+
             match = find_event_by_teams(away.team_name, home.team_name, sport)
             if not match or not match.get("event_id"):
                 continue
