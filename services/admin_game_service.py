@@ -1,4 +1,6 @@
 """Admin game removal and standings repair in one database transaction."""
+from datetime import datetime
+
 from database.db import SessionLocal
 from database.models import Game, Pick, User, Leaderboard, WeeklyWinner, SystemLog
 from database.extra_models import TiebreakerPick, SpecialPick, SpecialBonus
@@ -178,6 +180,13 @@ def update_game_details_as_admin(
             game.away_score = 0
             game.winner_team_id = None
             game.game_status = "Scheduled"
+
+            # Correcting a bad ESPN link/date may move kickoff back into the
+            # future. Release this game's picks so users can edit them again.
+            if kickoff_time is not None and kickoff_time > datetime.utcnow():
+                game.locked = False
+                for pick in picks:
+                    pick.locked = False
 
         if previous_tier != tier and picks:
             points = get_game_points(tier, game.week.week_number)

@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from utils.team_data import (
     NCAA_CONFERENCES,
     NFL_DIVISIONS,
@@ -113,6 +114,15 @@ def admin_page():
             existing_away = get_team_by_id(existing_game.away_team_id) if existing_game else None
             existing_home = get_team_by_id(existing_game.home_team_id) if existing_game else None
 
+            existing_nhl_date = None
+            if existing_game and existing_sport == "nhl" and existing_game.kickoff_time:
+                kickoff = existing_game.kickoff_time
+                if kickoff.tzinfo is None:
+                    kickoff = kickoff.replace(tzinfo=timezone.utc)
+                existing_nhl_date = kickoff.astimezone(
+                    ZoneInfo("America/New_York")
+                ).date().isoformat()
+
             with games_container:
         
                 with ui.card().classes(
@@ -145,6 +155,17 @@ def admin_page():
                         value=existing_sport,
                         label="Sport"
                     )
+
+                    nhl_date_label = ui.label(
+                        "NHL Game Date"
+                    ).style(
+                        "color: #d1d5db; font-weight: bold; margin-top: 6px;"
+                    )
+                    nhl_date = ui.date(
+                        value=existing_nhl_date
+                    )
+                    nhl_date_label.set_visibility(existing_sport == "nhl")
+                    nhl_date.set_visibility(existing_sport == "nhl")
         
                     away_conference = ui.select(
                         options=[],
@@ -171,6 +192,10 @@ def admin_page():
                     )
         
                     def update_conferences():
+
+                        is_nhl = sport.value == "nhl"
+                        nhl_date_label.set_visibility(is_nhl)
+                        nhl_date.set_visibility(is_nhl)
 
                         available_groups = list(
                             groups_for_sport(sport.value).keys()
@@ -237,6 +262,7 @@ def admin_page():
                     game_data = {
                         "game_number": game_number,
                         "sport": sport,
+                        "nhl_date": nhl_date,
                         "away_conference": away_conference,
                         "home_conference": home_conference,
                         "away_team": away_team,
@@ -614,10 +640,25 @@ def admin_page():
 
                     continue
 
+                selected_game_date = (
+                    game_data["nhl_date"].value
+                    if selected_sport == "nhl"
+                    else None
+                )
+
+                if selected_sport == "nhl" and not selected_game_date:
+                    failed_games += 1
+                    result_label.set_text(
+                        "Select the NHL game date before saving."
+                    )
+                    result_label.style("color: #ef4444;")
+                    continue
+
                 event = find_event_by_teams(
                     away_team_name=away_name,
                     home_team_name=home_name,
-                    sport=selected_sport
+                    sport=selected_sport,
+                    game_date=selected_game_date,
                 )
 
                 espn_event_id = None
@@ -711,7 +752,12 @@ def admin_page():
                     unmatched_games += 1
 
                     result_label.set_text(
-                        "No ESPN match found. Check exact team names and sport."
+                        (
+                            f"No ESPN NHL match found on {selected_game_date}. "
+                            "Check the date and teams."
+                            if selected_sport == "nhl"
+                            else "No ESPN match found. Check exact team names and sport."
+                        )
                     )
 
                     result_label.style(

@@ -144,7 +144,8 @@ def get_team_data_from_competitor(
 def find_event_by_teams(
     away_team_name,
     home_team_name,
-    sport="ncaa"
+    sport="ncaa",
+    game_date=None
 ):
 
     selected_sport = (
@@ -152,9 +153,24 @@ def find_event_by_teams(
         or "ncaa"
     ).lower()
 
-    scoreboard = get_scoreboard(
-        selected_sport
-    )
+    if selected_sport == "nhl" and game_date:
+        try:
+            response = requests.get(
+                NHL_SCOREBOARD_URL,
+                params={
+                    "dates": str(game_date).replace("-", ""),
+                    "limit": 100,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            scoreboard = response.json()
+        except Exception:
+            scoreboard = None
+    else:
+        scoreboard = get_scoreboard(
+            selected_sport
+        )
 
     if not scoreboard:
         return None
