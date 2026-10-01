@@ -665,60 +665,37 @@ def admin_page():
                         {}
                     )
 
-                    away_logo_path = None
-                    home_logo_path = None
+                    away_updates = {
+                        "espn_team_id": away_espn_data.get("espn_team_id"),
+                        "abbreviation": away_espn_data.get("abbreviation"),
+                        "record": away_espn_data.get("record"),
+                        "sport": selected_sport,
+                    }
+                    home_updates = {
+                        "espn_team_id": home_espn_data.get("espn_team_id"),
+                        "abbreviation": home_espn_data.get("abbreviation"),
+                        "record": home_espn_data.get("record"),
+                        "sport": selected_sport,
+                    }
 
-                    away_logo_url = away_espn_data.get(
-                        "logo"
-                    )
+                    # NHL logos are intentionally left to local assets supplied
+                    # by the admin. Keep the existing NCAA/NFL logo behavior.
+                    if selected_sport != "nhl":
+                        away_logo_url = away_espn_data.get("logo")
+                        home_logo_url = home_espn_data.get("logo")
+                        if away_logo_url:
+                            away_updates["logo_path"] = (
+                                download_logo(away_logo_url, away_name)
+                                or away_logo_url
+                            )
+                        if home_logo_url:
+                            home_updates["logo_path"] = (
+                                download_logo(home_logo_url, home_name)
+                                or home_logo_url
+                            )
 
-                    home_logo_url = home_espn_data.get(
-                        "logo"
-                    )
-
-                    if away_logo_url:
-
-                        away_logo_path = download_logo(
-                            away_logo_url,
-                            away_name
-                        )
-
-                    if home_logo_url:
-
-                        home_logo_path = download_logo(
-                            home_logo_url,
-                            home_name
-                        )
-
-                    update_team(
-                        away_team.id,
-                        espn_team_id=away_espn_data.get(
-                            "espn_team_id"
-                        ),
-                        abbreviation=away_espn_data.get(
-                            "abbreviation"
-                        ),
-                        record=away_espn_data.get(
-                            "record"
-                        ),
-                        logo_path=away_logo_path or away_logo_url,
-                        sport=selected_sport
-                    )
-
-                    update_team(
-                        home_team.id,
-                        espn_team_id=home_espn_data.get(
-                            "espn_team_id"
-                        ),
-                        abbreviation=home_espn_data.get(
-                            "abbreviation"
-                        ),
-                        record=home_espn_data.get(
-                            "record"
-                        ),
-                        logo_path=home_logo_path or home_logo_url,
-                        sport=selected_sport
-                    )
+                    update_team(away_team.id, **away_updates)
+                    update_team(home_team.id, **home_updates)
 
                     result_label.set_text(
                         f"ESPN match found. Event ID: {espn_event_id}"
