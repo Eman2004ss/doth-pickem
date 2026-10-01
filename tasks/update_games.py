@@ -70,6 +70,10 @@ def repair_unlinked_games():
             if not match or not match.get("event_id"):
                 continue
 
+            if match.get("orientation") == "reversed":
+                game.home_team_id, game.away_team_id = game.away_team_id, game.home_team_id
+                home, away = away, home
+
             game.espn_event_id = str(match["event_id"])
             game.sport = sport
             game.source = "espn"
