@@ -81,6 +81,14 @@ def repair_unlinked_games():
             if kickoff is not None:
                 game.kickoff_time = kickoff
 
+            # A previously bad NHL match can leave picks locked even after we
+            # repair the event/kickoff. If the corrected game is still in the
+            # future, release only this game's picks again.
+            if kickoff is not None and kickoff > datetime.utcnow() and not game.completed:
+                for pick in game.picks:
+                    pick.locked = False
+                game.locked = False
+
             _apply_team_data(away, match.get("away_team"), sport)
             _apply_team_data(home, match.get("home_team"), sport)
             repaired_ids.append(game.id)
