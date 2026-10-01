@@ -4,10 +4,28 @@ from database.db import SessionLocal
 from database.models import Game, Pick, Team, User, Week
 
 
+def _get_or_create_team(db, name, abbreviation):
+    team = db.query(Team).filter(Team.team_name == name).first()
+    if team:
+        return team
+
+    team = Team(
+        team_name=name,
+        abbreviation=abbreviation,
+        conference="BIG12",
+        sport="ncaa",
+        source="manual",
+    )
+    db.add(team)
+    db.flush()
+    return team
+
+
 def run():
     db = SessionLocal()
     week_id = None
     changed = False
+
     try:
         week = db.query(Week).filter(Week.week_number == 3).with_for_update().first()
         if not week:
@@ -15,11 +33,8 @@ def run():
             return False
         week_id = week.id
 
-        texas_tech = db.query(Team).filter(Team.team_name == "Texas Tech Red Raiders").first()
-        houston = db.query(Team).filter(Team.team_name == "Houston Cougars").first()
-        if not texas_tech or not houston:
-            print("Texas Tech or Houston team row missing; skipping restore.")
-            return False
+        texas_tech = _get_or_create_team(db, "Texas Tech Red Raiders", "TTU")
+        houston = _get_or_create_team(db, "Houston Cougars", "HOU")
 
         game = (
             db.query(Game)
@@ -39,6 +54,7 @@ def run():
                 .order_by(Game.game_number.desc(), Game.id.desc())
                 .first()
             )
+
             game = Game(
                 week_id=week.id,
                 game_number=(last_game.game_number + 1) if last_game else 1,
@@ -57,18 +73,38 @@ def run():
             db.add(game)
             db.flush()
             changed = True
+        else:
+            requested_game_values = {
+                "tier": "A",
+                "locked": True,
+                "home_score": 28,
+                "away_score": 26,
+                "game_status": "Final",
+                "winner_team_id": texas_tech.id,
+                "completed": True,
+            }
+            for field, value in requested_game_values.items():
+                if getattr(game, field) != value:
+                    setattr(game, field, value)
+                    changed = True
 
-        requested = {
+        requested_picks = {
             "Hawes": (texas_tech.id, True, 5),
             "Jimbo": (texas_tech.id, True, 5),
             "Coleman": (houston.id, False, 0),
         }
 
-        for username, (team_id, correct, points) in requested.items():
+        for username, (team_id, correct, points) in requested_picks.items():
             user = db.query(User).filter(User.username == username).first()
             if not user:
+                print(f"Week 3 restore warning: user {username!r} not found.")
                 continue
-            pick = db.query(Pick).filter(Pick.user_id == user.id, Pick.game_id == game.id).first()
+
+            pick = db.query(Pick).filter(
+                Pick.user_id == user.id,
+                Pick.game_id == game.id,
+            ).first()
+
             if not pick:
                 db.add(
                     Pick(
@@ -81,13 +117,21 @@ def run():
                     )
                 )
                 changed = True
-            else:
-                pick.selected_team_id = team_id
-                pick.locked = True
-                pick.is_correct = correct
-                pick.points_awarded = points
+                continue
+
+            requested_pick_values = {
+                "selected_team_id": team_id,
+                "locked": True,
+                "is_correct": correct,
+                "points_awarded": points,
+            }
+            for field, value in requested_pick_values.items():
+                if getattr(pick, field) != value:
+                    setattr(pick, field, value)
+                    changed = True
 
         db.commit()
+
     except Exception as error:
         db.rollback()
         print(f"Week 3 Texas Tech-Houston restore failed: {error}")
