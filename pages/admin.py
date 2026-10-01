@@ -1,7 +1,8 @@
 from datetime import datetime
 from utils.team_data import (
     NCAA_CONFERENCES,
-    NFL_DIVISIONS
+    NFL_DIVISIONS,
+    NHL_DIVISIONS,
 )
 from nicegui import app, ui
 from services.admin_game_service import remove_game_as_admin, update_game_tier_as_admin
@@ -89,7 +90,24 @@ def admin_page():
         )
 
 
-        def add_game_input(game_number):
+        def groups_for_sport(selected_sport):
+            if selected_sport == "nfl":
+                return NFL_DIVISIONS
+            if selected_sport == "nhl":
+                return NHL_DIVISIONS
+            return NCAA_CONFERENCES
+
+        def group_for_team(selected_sport, team_name):
+            for group_name, team_names in groups_for_sport(selected_sport).items():
+                if team_name in team_names:
+                    return group_name
+            return None
+
+        def add_game_input(game_number, existing_game=None):
+
+            existing_sport = (existing_game.sport or "ncaa") if existing_game else "ncaa"
+            existing_away = get_team_by_id(existing_game.away_team_id) if existing_game else None
+            existing_home = get_team_by_id(existing_game.home_team_id) if existing_game else None
 
             with games_container:
         
@@ -117,9 +135,10 @@ def admin_page():
                     sport = ui.select(
                         options=[
                             "ncaa",
-                            "nfl"
+                            "nfl",
+                            "nhl",
                         ],
-                        value="ncaa",
+                        value=existing_sport,
                         label="Sport"
                     )
         
@@ -148,18 +167,10 @@ def admin_page():
                     )
         
                     def update_conferences():
-        
-                        if sport.value == "nfl":
-        
-                            available_groups = list(
-                                NFL_DIVISIONS.keys()
-                            )
-        
-                        else:
-        
-                            available_groups = list(
-                                NCAA_CONFERENCES.keys()
-                            )
+
+                        available_groups = list(
+                            groups_for_sport(sport.value).keys()
+                        )
         
                         away_conference.set_options(
                             available_groups
@@ -173,44 +184,22 @@ def admin_page():
                         home_team.set_options([])
         
                     def update_away_teams():
-        
-                        if sport.value == "nfl":
-        
-                            away_team.set_options(
-                                NFL_DIVISIONS.get(
-                                    away_conference.value,
-                                    []
-                                )
+
+                        away_team.set_options(
+                            groups_for_sport(sport.value).get(
+                                away_conference.value,
+                                []
                             )
-        
-                        else:
-        
-                            away_team.set_options(
-                                NCAA_CONFERENCES.get(
-                                    away_conference.value,
-                                    []
-                                )
-                            )
+                        )
         
                     def update_home_teams():
-        
-                        if sport.value == "nfl":
-        
-                            home_team.set_options(
-                                NFL_DIVISIONS.get(
-                                    home_conference.value,
-                                    []
-                                )
+
+                        home_team.set_options(
+                            groups_for_sport(sport.value).get(
+                                home_conference.value,
+                                []
                             )
-        
-                        else:
-        
-                            home_team.set_options(
-                                NCAA_CONFERENCES.get(
-                                    home_conference.value,
-                                    []
-                                )
-                            )
+                        )
         
                     sport.on(
                         "update:model-value",
@@ -231,7 +220,7 @@ def admin_page():
         
                     tier = ui.select(
                         options=VALID_TIERS,
-                        value="A",
+                        value=("F" if existing_game and existing_game.tier == "E" else (existing_game.tier if existing_game else "A")),
                         label="Tier"
                     )
         
@@ -241,34 +230,79 @@ def admin_page():
                         "color: #d1d5db;"
                     )
         
-                    game_inputs.append(
-                        {
-                            "game_number": game_number,
-                            "sport": sport,
-                            "away_conference": away_conference,
-                            "home_conference": home_conference,
-                            "away_team": away_team,
-                            "home_team": home_team,
-                            "tier": tier,
-                            "result_label": result_label
-                        }
-                    )
+                    game_data = {
+                        "game_number": game_number,
+                        "sport": sport,
+                        "away_conference": away_conference,
+                        "home_conference": home_conference,
+                        "away_team": away_team,
+                        "home_team": home_team,
+                        "tier": tier,
+                        "result_label": result_label,
+                        "existing_game_id": existing_game.id if existing_game else None,
+                    }
+                    game_inputs.append(game_data)
 
+                    if existing_game:
+                        away_name = existing_away.team_name if existing_away else ""
+                        home_name = existing_home.team_name if existing_home else ""
+                        available_groups = groups_for_sport(existing_sport)
+                        away_group = group_for_team(existing_sport, away_name)
+                        home_group = group_for_team(existing_sport, home_name)
 
-        for game_number in range(
-            1,
-            GAMES_PER_WEEK + 1
-        ):
-            add_game_input(
-                game_number
+                        away_conference.set_options(list(available_groups.keys()))
+                        home_conference.set_options(list(available_groups.keys()))
+                        away_conference.set_value(away_group)
+                        home_conference.set_value(home_group)
+                        away_team.set_options(available_groups.get(away_group, [away_name] if away_name else []))
+                        home_team.set_options(available_groups.get(home_group, [home_name] if home_name else []))
+                        away_team.set_value(away_name)
+                        home_team.set_value(home_name)
+
+                        sport.disable()
+                        away_conference.disable()
+                        away_team.disable()
+                        home_conference.disable()
+                        home_team.disable()
+                        tier.disable()
+                        result_label.set_text("Existing game — preserved. Use Edit tier below if needed.")
+                        result_label.style("color: #60a5fa;")
+
+                    return game_data
+
+        def rebuild_game_inputs():
+            games_container.clear()
+            game_inputs.clear()
+
+            try:
+                selected_week_number = int(week_number.value)
+            except (TypeError, ValueError):
+                selected_week_number = 1
+
+            selected_week = next(
+                (
+                    existing_week
+                    for existing_week in get_all_weeks()
+                    if existing_week.week_number == selected_week_number
+                ),
+                None,
             )
 
+            existing_games = get_games_by_week(selected_week.id) if selected_week else []
+            for existing_game in existing_games:
+                add_game_input(existing_game.game_number, existing_game=existing_game)
+
+            next_number = max((game.game_number for game in existing_games), default=0) + 1
+            blank_count = max(1, GAMES_PER_WEEK - len(existing_games))
+            for offset in range(blank_count):
+                add_game_input(next_number + offset)
 
         def add_extra_game():
+            used_numbers = [item["game_number"] for item in game_inputs]
+            add_game_input(max(used_numbers, default=0) + 1)
 
-            add_game_input(
-                len(game_inputs) + 1
-            )
+        week_number.on("update:model-value", lambda e: rebuild_game_inputs())
+        rebuild_game_inputs()
 
 
         ui.button(
@@ -531,6 +565,9 @@ def admin_page():
 
             for game_data in game_inputs:
 
+                if game_data.get("existing_game_id"):
+                    continue
+
                 result_label = game_data[
                     "result_label"
                 ]
@@ -628,60 +665,37 @@ def admin_page():
                         {}
                     )
 
-                    away_logo_path = None
-                    home_logo_path = None
+                    away_updates = {
+                        "espn_team_id": away_espn_data.get("espn_team_id"),
+                        "abbreviation": away_espn_data.get("abbreviation"),
+                        "record": away_espn_data.get("record"),
+                        "sport": selected_sport,
+                    }
+                    home_updates = {
+                        "espn_team_id": home_espn_data.get("espn_team_id"),
+                        "abbreviation": home_espn_data.get("abbreviation"),
+                        "record": home_espn_data.get("record"),
+                        "sport": selected_sport,
+                    }
 
-                    away_logo_url = away_espn_data.get(
-                        "logo"
-                    )
+                    # NHL logos are intentionally left to local assets supplied
+                    # by the admin. Keep the existing NCAA/NFL logo behavior.
+                    if selected_sport != "nhl":
+                        away_logo_url = away_espn_data.get("logo")
+                        home_logo_url = home_espn_data.get("logo")
+                        if away_logo_url:
+                            away_updates["logo_path"] = (
+                                download_logo(away_logo_url, away_name)
+                                or away_logo_url
+                            )
+                        if home_logo_url:
+                            home_updates["logo_path"] = (
+                                download_logo(home_logo_url, home_name)
+                                or home_logo_url
+                            )
 
-                    home_logo_url = home_espn_data.get(
-                        "logo"
-                    )
-
-                    if away_logo_url:
-
-                        away_logo_path = download_logo(
-                            away_logo_url,
-                            away_name
-                        )
-
-                    if home_logo_url:
-
-                        home_logo_path = download_logo(
-                            home_logo_url,
-                            home_name
-                        )
-
-                    update_team(
-                        away_team.id,
-                        espn_team_id=away_espn_data.get(
-                            "espn_team_id"
-                        ),
-                        abbreviation=away_espn_data.get(
-                            "abbreviation"
-                        ),
-                        record=away_espn_data.get(
-                            "record"
-                        ),
-                        logo_path=away_logo_path or away_logo_url,
-                        sport=selected_sport
-                    )
-
-                    update_team(
-                        home_team.id,
-                        espn_team_id=home_espn_data.get(
-                            "espn_team_id"
-                        ),
-                        abbreviation=home_espn_data.get(
-                            "abbreviation"
-                        ),
-                        record=home_espn_data.get(
-                            "record"
-                        ),
-                        logo_path=home_logo_path or home_logo_url,
-                        sport=selected_sport
-                    )
+                    update_team(away_team.id, **away_updates)
+                    update_team(home_team.id, **home_updates)
 
                     result_label.set_text(
                         f"ESPN match found. Event ID: {espn_event_id}"
@@ -732,6 +746,7 @@ def admin_page():
             )
 
             load_weeks()
+            rebuild_game_inputs()
 
         ui.button(
             "Save Week",

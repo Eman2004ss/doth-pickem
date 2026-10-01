@@ -21,21 +21,28 @@ _CACHE_SECONDS = 300
 _SESSION = requests.Session()
 
 
-def _league_path(sport):
-    return "nfl" if (sport or "ncaa").lower() == "nfl" else "college-football"
+def _sport_path(sport):
+    selected = (sport or "ncaa").lower()
+    if selected == "nfl":
+        return "football", "nfl"
+    if selected == "nhl":
+        return "hockey", "nhl"
+    return "football", "college-football"
 
 
 def _scoreboard_url(sport):
+    category, league = _sport_path(sport)
     return (
-        "https://site.api.espn.com/apis/site/v2/sports/football/"
-        f"{_league_path(sport)}/scoreboard"
+        "https://site.api.espn.com/apis/site/v2/sports/"
+        f"{category}/{league}/scoreboard"
     )
 
 
 def _summary_url(sport):
+    category, league = _sport_path(sport)
     return (
-        "https://site.api.espn.com/apis/site/v2/sports/football/"
-        f"{_league_path(sport)}/summary"
+        "https://site.api.espn.com/apis/site/v2/sports/"
+        f"{category}/{league}/summary"
     )
 
 
@@ -168,13 +175,39 @@ def _search_plan(sport):
     return [(2, range(0, 17)), (3, range(1, 8))]
 
 
-def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
-    """Find a matchup anywhere in the relevant ESPN season schedule."""
-    sport = (sport or "ncaa").lower()
-    year = datetime.now(timezone.utc).year
-    candidate_years = (year, year + 1, year - 1)
+def _cached_nhl_scoreboard(start_day, end_day=None):
+    end_day = end_day or start_day
+    date_key = (
+        start_day.strftime("%Y%m%d")
+        if start_day == end_day
+        else f"{start_day.strftime('%Y%m%d')}-{end_day.strftime('%Y%m%d')}"
+    )
+    key = ("nhl-date", date_key)
+    now = time.time()
+    cached = _CACHE.get(key)
+    if cached and now - cached[0] < _CACHE_SECONDS:
+        return cached[1]
 
-    # Fast path: keep the legacy current-scoreboard lookup first.
+    try:
+        response = _SESSION.get(
+            _scoreboard_url("nhl"),
+            params={"dates": date_key, "limit": 1000},
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except Exception:
+        payload = None
+
+    _CACHE[key] = (now, payload)
+    return payload
+
+
+def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
+    """Find a matchup anywhere in the relevant ESPN schedule."""
+    sport = (sport or "ncaa").lower()
+
+    # Fast path: current scoreboard.
     try:
         current = legacy.get_scoreboard(sport)
         if current:
@@ -184,6 +217,25 @@ def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
     except Exception:
         pass
 
+    if sport == "nhl":
+        # NHL schedules are date-oriented instead of week-oriented. Search a
+        # practical window around today so this week's admin additions link
+        # immediately, including near-future games.
+        from datetime import timedelta
+
+        today = datetime.now(timezone.utc).date()
+        board = _cached_nhl_scoreboard(
+            today - timedelta(days=7),
+            today + timedelta(days=28),
+        )
+        if board:
+            for event in board.get("events", []):
+                if _event_matches(event, away_team_name, home_team_name):
+                    return _event_result(event, sport)
+        return None
+
+    year = datetime.now(timezone.utc).year
+    candidate_years = (year, year + 1, year - 1)
     for season in candidate_years:
         for season_type, weeks in _search_plan(sport):
             for week in weeks:
@@ -220,7 +272,21 @@ def get_event_by_id(espn_event_id, sport="ncaa"):
     except Exception:
         pass
 
-    # Fallback to a season scan if ESPN's summary endpoint is unavailable.
+    # Fallback to a schedule scan if ESPN's summary endpoint is unavailable.
+    if (sport or "ncaa").lower() == "nhl":
+        from datetime import timedelta
+
+        today = datetime.now(timezone.utc).date()
+        board = _cached_nhl_scoreboard(
+            today - timedelta(days=14),
+            today + timedelta(days=35),
+        )
+        if board:
+            for event in board.get("events", []):
+                if str(event.get("id")) == str(espn_event_id):
+                    return event
+        return None
+
     year = datetime.now(timezone.utc).year
     for season in (year, year + 1, year - 1):
         for season_type, weeks in _search_plan(sport):
