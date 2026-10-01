@@ -2,10 +2,11 @@
 
 from database.db import SessionLocal
 from database.models import Game
+from services.week3_texas_tech_houston_migration import run as restore_week3_texas_tech_houston
 
 
 def run_startup_migrations():
-    """Rename legacy one-point E-tier rows to F without changing their value."""
+    """Run safe repeatable migrations without replacing existing picks."""
     db = SessionLocal()
     try:
         db.query(Game).filter(Game.tier == "E").update(
@@ -18,3 +19,5 @@ def run_startup_migrations():
         print(f"startup migration error: {error}")
     finally:
         db.close()
+
+    restore_week3_texas_tech_houston()
