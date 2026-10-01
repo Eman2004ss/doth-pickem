@@ -277,8 +277,8 @@ def _find_nhl_team_id(team_name):
     return None
 
 
-def _cached_nhl_team_schedule(team_id):
-    key = ("nhl-team-schedule", str(team_id), datetime.now(timezone.utc).year)
+def _cached_nhl_team_schedule(team_id, season):
+    key = ("nhl-team-schedule", str(team_id), int(season))
     now = time.time()
     cached = _CACHE.get(key)
     if cached and now - cached[0] < _CACHE_SECONDS:
@@ -287,7 +287,7 @@ def _cached_nhl_team_schedule(team_id):
     try:
         response = _SESSION.get(
             _team_schedule_url("nhl", team_id),
-            params={"season": datetime.now(timezone.utc).year},
+            params={"season": int(season)},
             timeout=10,
         )
         response.raise_for_status()
@@ -299,29 +299,64 @@ def _cached_nhl_team_schedule(team_id):
     return payload
 
 
+def _parse_event_time(event):
+    raw = event.get("date")
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
 def _find_nhl_event_from_team_schedule(away_team_name, home_team_name):
-    """Search the selected teams' full NHL schedules, independent of game date."""
+    """Choose the nearest future matching NHL event from full team schedules."""
     candidate_ids = []
     for team_name in (away_team_name, home_team_name):
         team_id = _find_nhl_team_id(team_name)
         if team_id and team_id not in candidate_ids:
             candidate_ids.append(team_id)
 
-    for team_id in candidate_ids:
-        schedule = _cached_nhl_team_schedule(team_id)
-        if not schedule:
-            continue
-        for event in schedule.get("events") or []:
-            matched = _matched_result(
-                event,
-                away_team_name,
-                home_team_name,
-                "nhl",
-            )
-            if matched:
-                return matched
+    now = datetime.now(timezone.utc)
+    years = (now.year - 1, now.year, now.year + 1)
+    matches = {}
 
-    return None
+    for team_id in candidate_ids:
+        for season in years:
+            schedule = _cached_nhl_team_schedule(team_id, season)
+            if not schedule:
+                continue
+            for event in schedule.get("events") or []:
+                matched = _matched_result(
+                    event,
+                    away_team_name,
+                    home_team_name,
+                    "nhl",
+                )
+                if not matched:
+                    continue
+                event_id = str(matched.get("event_id") or "")
+                event_time = _parse_event_time(event)
+                if not event_id or not event_time:
+                    continue
+                matches[event_id] = (event_time, matched)
+
+    if not matches:
+        return None
+
+    future = sorted(
+        (item for item in matches.values() if item[0] >= now),
+        key=lambda item: item[0],
+    )
+    if future:
+        return future[0][1]
+
+    # Only if there is no future meeting at all, use the most recent past one.
+    past = sorted(matches.values(), key=lambda item: item[0], reverse=True)
+    return past[0][1]
 
 
 def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
@@ -412,12 +447,17 @@ def get_event_by_id(espn_event_id, sport="ncaa"):
             team_id = team.get("id")
             if team_id is None:
                 continue
-            schedule = _cached_nhl_team_schedule(team_id)
-            if not schedule:
-                continue
-            for event in schedule.get("events") or []:
-                if str(event.get("id")) == str(espn_event_id):
-                    return event
+            for season in (
+                datetime.now(timezone.utc).year - 1,
+                datetime.now(timezone.utc).year,
+                datetime.now(timezone.utc).year + 1,
+            ):
+                schedule = _cached_nhl_team_schedule(team_id, season)
+                if not schedule:
+                    continue
+                for event in schedule.get("events") or []:
+                    if str(event.get("id")) == str(espn_event_id):
+                        return event
 
         from datetime import timedelta
 
