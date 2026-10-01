@@ -175,8 +175,14 @@ def _search_plan(sport):
     return [(2, range(0, 17)), (3, range(1, 8))]
 
 
-def _cached_nhl_scoreboard(day):
-    key = ("nhl-date", day.strftime("%Y%m%d"))
+def _cached_nhl_scoreboard(start_day, end_day=None):
+    end_day = end_day or start_day
+    date_key = (
+        start_day.strftime("%Y%m%d")
+        if start_day == end_day
+        else f"{start_day.strftime('%Y%m%d')}-{end_day.strftime('%Y%m%d')}"
+    )
+    key = ("nhl-date", date_key)
     now = time.time()
     cached = _CACHE.get(key)
     if cached and now - cached[0] < _CACHE_SECONDS:
@@ -185,7 +191,7 @@ def _cached_nhl_scoreboard(day):
     try:
         response = _SESSION.get(
             _scoreboard_url("nhl"),
-            params={"dates": day.strftime("%Y%m%d"), "limit": 1000},
+            params={"dates": date_key, "limit": 1000},
             timeout=10,
         )
         response.raise_for_status()
@@ -218,10 +224,11 @@ def find_event_by_teams(away_team_name, home_team_name, sport="ncaa"):
         from datetime import timedelta
 
         today = datetime.now(timezone.utc).date()
-        for offset in range(-7, 29):
-            board = _cached_nhl_scoreboard(today + timedelta(days=offset))
-            if not board:
-                continue
+        board = _cached_nhl_scoreboard(
+            today - timedelta(days=7),
+            today + timedelta(days=28),
+        )
+        if board:
             for event in board.get("events", []):
                 if _event_matches(event, away_team_name, home_team_name):
                     return _event_result(event, sport)
@@ -270,10 +277,11 @@ def get_event_by_id(espn_event_id, sport="ncaa"):
         from datetime import timedelta
 
         today = datetime.now(timezone.utc).date()
-        for offset in range(-14, 36):
-            board = _cached_nhl_scoreboard(today + timedelta(days=offset))
-            if not board:
-                continue
+        board = _cached_nhl_scoreboard(
+            today - timedelta(days=14),
+            today + timedelta(days=35),
+        )
+        if board:
             for event in board.get("events", []):
                 if str(event.get("id")) == str(espn_event_id):
                     return event
